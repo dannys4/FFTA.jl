@@ -1,5 +1,8 @@
 module NSFFT
 
-# Write your package code here.
+using Primes
+export pow2FFT!, myfft_sv
+
+include("algos.jl")
 
 end
