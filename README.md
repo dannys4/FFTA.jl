@@ -16,3 +16,5 @@ Interface:
 `fft(x::AbstractMatrix{<:Complex})`-- Forward FFT
 `bfft(x::AbstractVector{<:Complex})`-- Backward FFT (unscaled inverse FFT)
 `bfft(x::AbstractMatrix{<:Complex})`-- Backward FFT (unscaled inverse FFT)
+
+TODO: Rename to "FFTA"- Fastest Fourier Transform in my Apartment
