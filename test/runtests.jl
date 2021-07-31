@@ -1,6 +1,5 @@
-using NSFFT
-using Test
+using ReTest
 
 @testset "NSFFT.jl" begin
-    # Write your tests here.
+    include("testNSFFT.jl")
 end
