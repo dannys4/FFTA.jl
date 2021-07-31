@@ -35,12 +35,13 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD},
     N = out.size()
     left = left(g,i)
     right = right(g,i)
-    N1 = length(left)
-    N2 = length(right)
+    N1 = left.sz
+    N2 = right.sz
 
     inc = 2*π/N
-    w = T(cos(inc), -sin(inc))
-    wj = T(1, 0)
+    w1 = T(cos(inc), -sin(inc))
+    wj1 = T(1, 0)
+    tmp = g.workspace[idx]
     for j1 in 2:N1
         Complex<F,L> wk2 = wj1;
         @views g(out[j1:N1:end], tmp[N2*j1:N2*(j1-1)-1], Val(FFT_FORWARD), right.type, g, idx + g[idx].right)
