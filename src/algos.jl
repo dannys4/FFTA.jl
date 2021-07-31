@@ -50,6 +50,31 @@ function pow2FFT!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKW
     end
 end
 
+function DFT!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T<:Complex}
+    N = length(out)
+    inc = 2*π/N
+    wn² = wn = w = T(cos(inc), sin(inc));
+    wn_1 = T(1., 0.);
+
+    tmp = in[1];
+    out .= tmp;
+    tmp = sum(in)
+    out[1] = tmp;
+
+    wk = wn²;
+    for d in 1:N
+        for k in (d+1):N
+            wk *= wn
+            out[d] = in[k]*wk + out[d]
+            out[k] = in[d]*wk + out[k]
+        end
+        wn_1 = wn
+        wn *= w
+        wn² *= (wn*wn_1)
+        wk = wn²
+    end
+end
+
 function DFT!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T<:Complex}
     N = length(out)
     inc = 2*π/N
