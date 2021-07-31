@@ -1,22 +1,44 @@
 @enum Direction FFT_FORWARD FFT_BACKWARD
-abstract type abstractFFTType end
+abstract type AbstractFFTType end
 
 struct CallGraphNode
-    left::CallGraphNode
-    right::CallGraphNode
+    left::Int
+    right::Int
+    type::AbstractFFTType
     sz::Int
-    type::abstractFFTType
 end
 
-struct Pow2FFT end
+struct CallGraph
+    nodes::Vector{CallGraphNode}
+end
 
-struct DFT end
+getindex(g::CallGraph, i::Int) = g.nodes[i]
+
+left(g::CallGraph, i::Int) = g[i][g[i].left]
+
+right(g::CallGraph, i::Int) = g[i][g[i].right]
+
+struct CompositeFFT <: AbstractFFTType end
+
+struct Pow2FFT <: AbstractFFTType end
+
+struct DFT <: AbstractFFTType end
+
+fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{<:Direction}, ::AbstractFFTType, ::CallGraph, ::Int) = nothing
+
+function (g::CallGraph)(out::AbstractVector{T}, in::AbstractVector{T}, v::Val{<:Direction}, t::AbstractFFTType, idx::Int)
+    fft!(out, in, v, t, g, idx)
+end
+
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::CompositeFFT, g::CallGraph, idx::Int) where {T<:Complex}
+    
+end
 
 """
 Power of 2 FFT in place, forward
 
 """
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::Pow2FFT) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::Pow2FFT, ::CallGraph, ::Int) where {T<:Complex}
     N = length(out)
     if N == 1
         out[1] = in[1]
@@ -41,7 +63,7 @@ end
 Power of 2 FFT in place, backward
 
 """
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::Pow2FFT) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::Pow2FFT, ::CallGraph, ::Int) where {T<:Complex}
     N = length(out)
     if N == 1
         out[1] = in[1]
@@ -62,7 +84,7 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}
     end
 end
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::DFT) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::DFT, ::CallGraph, ::Int) where {T<:Complex}
     N = length(out)
     inc = 2*π/N
     wn² = wn = w = T(cos(inc), sin(inc));
@@ -87,7 +109,7 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}
     end
 end
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::DFT) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::DFT, ::CallGraph, ::Int) where {T<:Complex}
     N = length(out)
     inc = 2*π/N
     wn² = wn = w = T(cos(inc), -sin(inc));
