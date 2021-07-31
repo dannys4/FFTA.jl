@@ -27,25 +27,19 @@ struct DFT <: AbstractFFTType end
 
 function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{Vector{T}})::Int where {T<:Complex}
     facs = factor(N)
+    @info "N" N
     Ns = [first(x) for x in collect(facs) for _ in 1:last(x)]
     if length(Ns) == 1
         push!(workspace, T[])
-        push!(nodes, CallGraphNode(0,0,DFT(),N))
-        return 1
-    end
-    if Ns[end] == 2
-        push!(workspace, T[])
-        push!(nodes, CallGraphNode(0,0,Pow2FFT(),N))
+        push!(nodes, CallGraphNode(0,0,Ns[end] == 2 ? Pow2FFT() : DFT(),N))
         return 1
     end
 
     Nsqrt = sqrt(N)
     N_cp = cumprod(Ns[end:-1:1])[end:-1:1]
     break_idx = findlast(>(Nsqrt), N_cp)
-    @info "" N_cp break_idx
     N1 = prod(Ns[break_idx:end])
     N2 = N ÷ N1
-    @info "Callgraph" N1 N2
     push!(nodes, CallGraphNode(0,0,DFT(),N))
     sz = length(nodes)
     push!(workspace, Vector{T}(undef, N2))
