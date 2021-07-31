@@ -1,10 +1,22 @@
 @enum Direction FFT_FORWARD FFT_BACKWARD
+abstract type abstractFFTType end
+
+struct CallGraphNode
+    left::CallGraphNode
+    right::CallGraphNode
+    sz::Int
+    type::abstractFFTType
+end
+
+struct Pow2FFT end
+
+struct DFT end
 
 """
 Power of 2 FFT in place, forward
 
 """
-function pow2FFT!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::Pow2FFT) where {T<:Complex}
     N = length(out)
     if N == 1
         out[1] = in[1]
@@ -29,7 +41,7 @@ end
 Power of 2 FFT in place, backward
 
 """
-function pow2FFT!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::Pow2FFT) where {T<:Complex}
     N = length(out)
     if N == 1
         out[1] = in[1]
@@ -50,7 +62,7 @@ function pow2FFT!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKW
     end
 end
 
-function DFT!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::DFT) where {T<:Complex}
     N = length(out)
     inc = 2*π/N
     wn² = wn = w = T(cos(inc), sin(inc));
@@ -75,7 +87,7 @@ function DFT!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}
     end
 end
 
-function DFT!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::DFT) where {T<:Complex}
     N = length(out)
     inc = 2*π/N
     wn² = wn = w = T(cos(inc), -sin(inc));
