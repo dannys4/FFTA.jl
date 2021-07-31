@@ -1,5 +1,5 @@
 using Test
 
 @testset verbose = true "Unit Tests" begin
-    include("testNSFFT.jl")
+    include("ffta.jl")
 end

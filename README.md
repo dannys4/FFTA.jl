@@ -1,4 +1,4 @@
-# NSFFT
+# FFTA: Fastest Fourier Transform in my Apartment
 ## A library by Danny Sharp
 
 This is a *pure Julia* implementation of FFTs, with the goal that this could supplant other FFTs for applications that require odd Julia objects. Currently this supports `AbstractArray{T,N}` for `T<:Complex` and `N` in `{1,2}` (i.e. `AbstractVector` and `AbstractMatrix`). If you're looking for more performance, checkout `FFTW.jl`.

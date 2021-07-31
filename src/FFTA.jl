@@ -1,4 +1,4 @@
-module NSFFT
+module FFTA
 
 using Primes, DocStringExtensions
 import Base: getindex
