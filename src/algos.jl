@@ -37,10 +37,12 @@ function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{
     if Ns[1] == 2
         N1 = prod(Ns[Ns .== 2])
     else
+        # Greedy search for closest factor of N to sqrt(N)
         Nsqrt = sqrt(N)
         N_cp = cumprod(Ns[end:-1:1])[end:-1:1]
-        break_idx = findlast(>(Nsqrt), N_cp)
-        N1 = prod(Ns[break_idx:end])
+        N_prox = abs.(N_cp .- Nsqrt)
+        _,N1_idx = findmin(N_prox)
+        N1 = N_cp[N1_idx]
     end
     N2 = N ÷ N1
     push!(nodes, CallGraphNode(0,0,DFT(),N))
