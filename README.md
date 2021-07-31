@@ -10,3 +10,9 @@ Path Forward:
 - Instead of `@view`, just `vec` and `ArrayInterfaces.restructure` and then use `CPtr` instead.
 - Accelerate dynamic dispatching?
 - Other performance left on the table....
+
+Interface:
+`fft(x::AbstractVector{<:Complex})`-- Forward FFT
+`fft(x::AbstractMatrix{<:Complex})`-- Forward FFT
+`bfft(x::AbstractVector{<:Complex})`-- Backward FFT (unscaled inverse FFT)
+`bfft(x::AbstractMatrix{<:Complex})`-- Backward FFT (unscaled inverse FFT)
