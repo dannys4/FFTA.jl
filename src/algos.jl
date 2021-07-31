@@ -49,6 +49,12 @@ function CallGraph{T}(N::Int) where {T<:Complex}
     CallGraph(nodes, workspace)
 end
 
+function fft(x::AbstractVector{T}) where {T<:Complex}
+    y = similar(x)
+    g = CallGraph{T}(length(x))
+    fft!(y, x, Val(FFT_FORWARD), g[1].type, g, 1)
+end
+
 getindex(g::CallGraph, i::Int) = g.nodes[i]
 
 left(g::CallGraph, i::Int) = g[i][i+g[i].left]
