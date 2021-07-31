@@ -27,25 +27,28 @@ struct DFT <: AbstractFFTType end
 
 function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{Vector{T}})::Int where {T<:Complex}
     facs = factor(N)
-    @info "N" N
     Ns = [first(x) for x in collect(facs) for _ in 1:last(x)]
-    if length(Ns) == 1
+    if length(Ns) == 1 || Ns[end] == 2
         push!(workspace, T[])
         push!(nodes, CallGraphNode(0,0,Ns[end] == 2 ? Pow2FFT() : DFT(),N))
         return 1
     end
 
-    Nsqrt = sqrt(N)
-    N_cp = cumprod(Ns[end:-1:1])[end:-1:1]
-    break_idx = findlast(>(Nsqrt), N_cp)
-    N1 = prod(Ns[break_idx:end])
+    if Ns[1] == 2
+        N1 = prod(Ns[Ns .== 2])
+    else
+        Nsqrt = sqrt(N)
+        N_cp = cumprod(Ns[end:-1:1])[end:-1:1]
+        break_idx = findlast(>(Nsqrt), N_cp)
+        N1 = prod(Ns[break_idx:end])
+    end
     N2 = N ÷ N1
     push!(nodes, CallGraphNode(0,0,DFT(),N))
     sz = length(nodes)
-    push!(workspace, Vector{T}(undef, N2))
+    push!(workspace, Vector{T}(undef, N))
     left_len = CallGraphNode!(nodes, N1, workspace)
     right_len = CallGraphNode!(nodes, N2, workspace)
-    nodes[sz] = CallGraphNode(left_len, right_len, CompositeFFT(), N)
+    nodes[sz] = CallGraphNode(1, 1 + left_len, CompositeFFT(), N)
     return 1 + left_len + right_len
 end
 
@@ -84,12 +87,11 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD},
     w1 = T(cos(inc), -sin(inc))
     wj1 = T(1, 0)
     tmp = g.workspace[idx]
-    for j1 in 2:N1
+    for j1 in 1:N1
         wk2 = wj1;
-        @info "" N1 N2 j1 tmp
-        @views g(tmp[N2*j1:(N2*(j1+1)-1)], in[j1:N1:end], Val(FFT_FORWARD), right.type, idx + g[idx].right)
-        for k2 in 2:N2
-            tmp[j1*N2+k2] *= wk2
+        @views g(tmp[(N2*(j1-1) + 1):(N2*j1)], in[j1:N1:end], Val(FFT_FORWARD), right.type, idx + g[idx].right)
+        j1 > 1 && for k2 in 2:N2
+            tmp[N2*(j1-1) + k2] *= wk2
             wk2 *= wj1
         end
         wj1 *= w1
