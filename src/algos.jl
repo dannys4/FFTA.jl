@@ -13,6 +13,42 @@ struct CallGraph{T<:Complex}
     workspace::Vector{Vector{T}}
 end
 
+function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{Vector{T}})::Int where {T<:Complex}
+    facs = factor(N)
+    Ns = [first(x) for x in collect(facs) for _ in 1:last(x)]
+    if length(Ns) == 1
+        push!(workspace, T[])
+        push!(nodes, CallGraphNode(0,0,DFT(),N))
+        return 1
+    end
+
+    if Ns[end] == 2
+        push!(workspace, T[])
+        push!(nodes, CallGraphNode(0,0,Pow2FFT(),N))
+        return 1
+    end
+
+    Nsqrt = sqrt(N)
+    N_cp = cumprod(Ns[end:-1:1])[end:-1:1]
+    break_idx = findlast(>(Nsqrt), N_cp)
+    N1 = prod(Ns[(break_idx+1):end])
+    N2 = N/N1
+    push!(nodes, CallGraphNode(0,0,DFT(),N))
+    sz = length(nodes)
+    push!(workspace, Vector{T}(undef, N2))
+    left_len = CallGraphNode!(nodes, N1, workspace)
+    right_len = CallGraphNode!(nodes, N2, workspace)
+    nodes[sz] = CallGraphNode(left_len, right_len, CompositeFFT(), N)
+    return 1 + left_len + right_len
+end
+
+function CallGraph{T}(N::Int) where {T<:Complex}
+    nodes = CallGraphNode[]
+    workspace = Vector{Vector{T}}()
+    CallGraphNode!(nodes, N, workspace)
+    CallGraph(nodes, workspace)
+end
+
 getindex(g::CallGraph, i::Int) = g.nodes[i]
 
 left(g::CallGraph, i::Int) = g[i][i+g[i].left]
@@ -25,9 +61,9 @@ struct Pow2FFT <: AbstractFFTType end
 
 struct DFT <: AbstractFFTType end
 
-fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{<:Direction}, ::AbstractFFTType, ::CallGraph{T}, ::Int) = nothing
+fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{<:Direction}, ::AbstractFFTType, ::CallGraph{T}, ::Int) where {T} = nothing
 
-function (g::CallGraph{T})(out::AbstractVector{T}, in::AbstractVector{T}, v::Val{<:Direction}, t::AbstractFFTType, idx::Int)
+function (g::CallGraph{T})(out::AbstractVector{T}, in::AbstractVector{T}, v::Val{<:Direction}, t::AbstractFFTType, idx::Int) where {T}
     fft!(out, in, v, t, g, idx)
 end
 
