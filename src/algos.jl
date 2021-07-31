@@ -1,6 +1,21 @@
 @enum Direction FFT_FORWARD FFT_BACKWARD
 abstract type AbstractFFTType end
 
+"""
+$(TYPEDSIGNATURES)
+Node of a call graph
+
+# Arguments
+`left::Int`- Offset to the left child node
+`right::Int`- Offset to the right child node
+`type::AbstractFFTType`- Object representing the type of FFT
+`sz::Int`- Size of this FFT
+
+# Examples
+```julia
+julia> CallGraphNode(0, 0, Pow2FFT(), 8)
+```
+"""
 struct CallGraphNode
     left::Int
     right::Int
@@ -8,11 +23,40 @@ struct CallGraphNode
     sz::Int
 end
 
+"""
+$(TYPEDSIGNATURES)
+Object representing a graph of FFT Calls
+
+# Arguments
+`nodes::Vector{CallGraphNode}`- Nodes keeping track of the graph
+`workspace::Vector{Vector{T}}`- Preallocated Workspace
+
+# Examples
+```julia
+julia> CallGraph{ComplexF64}(CallGraphNode[], Vector{T}[])
+```
+"""
 struct CallGraph{T<:Complex}
     nodes::Vector{CallGraphNode}
     workspace::Vector{Vector{T}}
 end
 
+"""
+$(TYPEDSIGNATURES)
+Get the node at index `i`
+
+# Arguments
+`g::CallGraph{T}`- Graph to acces
+`i::Int`- Index of the node to access
+
+# Examples
+```julia
+julia> g = CallGraph(5);
+
+julia> g[2];
+
+```
+"""
 Base.getindex(g::CallGraph{T}, i::Int) where {T<:Complex} = g.nodes[i]
 
 leftNode(g::CallGraph, i::Int) = g[i+g[i].left]
@@ -130,18 +174,26 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}
     end
 end
 
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::Pow2FFT, ::CallGraph{T}, ::Int) where {T<:Complex}
+    fft_pow2!(out, in, Val(FFT_FORWARD))
+end
+
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::Pow2FFT, ::CallGraph{T}, ::Int) where {T<:Complex}
+    fft_pow2!(out, in, Val(FFT_BACKWARD))
+end
+
 """
 Power of 2 FFT in place, forward
 
 """
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::Pow2FFT, g::CallGraph{T}, i::Int) where {T<:Complex}
+function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T<:Complex}
     N = length(out)
     if N == 1
         out[1] = in[1]
         return
     end
-    fft!(@view(out[1:(end÷2)]), @view(in[1:2:end]), Val(FFT_FORWARD), Pow2FFT(), g, i)
-    fft!(@view(out[(end÷2+1):end]), @view(in[2:2:end]), Val(FFT_FORWARD), Pow2FFT(), g, i)
+    fft_pow2!(@view(out[1:(end÷2)]),     @view(in[1:2:end]), Val(FFT_FORWARD))
+    fft_pow2!(@view(out[(end÷2+1):end]), @view(in[2:2:end]), Val(FFT_FORWARD))
 
     inc = 2*π/N
     w1 = T(cos(inc), -sin(inc));
@@ -159,14 +211,14 @@ end
 Power of 2 FFT in place, backward
 
 """
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::Pow2FFT, g::CallGraph{T}, idx::Int) where {T<:Complex}
+function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T<:Complex}
     N = length(out)
     if N == 1
         out[1] = in[1]
         return
     end
-    fft!(@view(out[1:(end÷2)]), @view(in[1:2:end]), Val(FFT_BACKWARD), Pow2FFT(), g, idx)
-    fft!(@view(out[(end÷2+1):end]), @view(in[2:2:end]), Val(FFT_BACKWARD), Pow2FFT(), g, idx)
+    fft_pow2!(@view(out[1:(end÷2)]),     @view(in[1:2:end]), Val(FFT_BACKWARD))
+    fft_pow2!(@view(out[(end÷2+1):end]), @view(in[2:2:end]), Val(FFT_BACKWARD))
 
     inc = 2*π/N
     w1 = T(cos(inc), sin(inc));
