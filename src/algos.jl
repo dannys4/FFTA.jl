@@ -62,7 +62,7 @@ function DFT!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD})
     out[1] = tmp;
 
     wk = wn²;
-    @turbo for d in 1:N
+    for d in 1:N
         for k in (d+1):N
             wk *= wn
             out[d] = in[k]*wk + out[d]
