@@ -1,5 +1,7 @@
+module NSFFT_test
 using ReTest
 
-@testset "NSFFT.jl" begin
+@testset verbose = true "Unit Tests" begin
     include("testNSFFT.jl")
+end
 end

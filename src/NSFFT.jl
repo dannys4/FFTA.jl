@@ -1,6 +1,6 @@
 module NSFFT
 
-using Primes, StaticArrays, LoopVectorization, DocStringExtensions
+using Primes, DocStringExtensions
 import Base: getindex
 export fft, bfft
 
