@@ -1,9 +1,5 @@
 @enum Direction FFT_FORWARD FFT_BACKWARD
 
-function pow2FFT!(out::AbstractArray{T,0}, in::AbstractArray{T,1}, ::Val) where T
-    out[] = in[1]
-end
-
 function pow2FFT!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T<:Complex}
     N = length(out)
     if N == 1
