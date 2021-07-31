@@ -118,6 +118,7 @@ function fft(x::AbstractMatrix{T}) where {T<:Complex}
     for k in 1:M
         @views fft!(y2[k,:], y1[k,:], Val(FFT_FORWARD), g2[1].type, g2, 1)
     end
+    y2
 end
 
 fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{<:Direction}, ::AbstractFFTType, ::CallGraph{T}, ::Int) where {T} = nothing
@@ -240,7 +241,7 @@ function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACK
     end
 end
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::DFT, ::CallGraph{T}, ::Int) where {T<:Complex}
+function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T<:Complex}
     N = length(out)
     inc = 2*π/N
     wn² = wn = w = T(cos(inc), sin(inc))
@@ -266,7 +267,7 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}
     end
 end
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::DFT, ::CallGraph{T}, ::Int) where {T<:Complex}
+function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T<:Complex}
     N = length(out)
     inc = 2*π/N
     wn² = wn = w = T(cos(inc), -sin(inc));
@@ -290,4 +291,13 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD},
         wn² *= (wn*wn_1)
         wk = wn²
     end
+end
+
+
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::DFT, ::CallGraph{T}, ::Int) where {T<:Complex}
+    fft_dft!(out, in, Val(FFT_FORWARD))
+end
+
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::DFT, ::CallGraph{T}, ::Int) where {T<:Complex}
+    fft_dft!(out, in, Val(FFT_BACKWARD))
 end
