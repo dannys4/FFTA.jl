@@ -1,6 +1,15 @@
 @enum Direction FFT_FORWARD FFT_BACKWARD
 abstract type AbstractFFTType end
 
+# Represents a Composite Cooley-Tukey FFT
+struct CompositeFFT <: AbstractFFTType end
+
+# Represents a Radix-2 Cooley-Tukey FFT
+struct Pow2FFT <: AbstractFFTType end
+
+# Represents an O(N²) DFT
+struct DFT <: AbstractFFTType end
+
 """
 $(TYPEDSIGNATURES)
 Node of a call graph
@@ -41,34 +50,16 @@ struct CallGraph{T<:Complex}
     workspace::Vector{Vector{T}}
 end
 
-"""
-$(TYPEDSIGNATURES)
-Get the node at index `i`
-
-# Arguments
-`g::CallGraph{T}`- Graph to acces
-`i::Int`- Index of the node to access
-
-# Examples
-```julia
-julia> g = CallGraph(5);
-
-julia> g[2];
-
-```
-"""
+# Get the node in the graph at index i
 Base.getindex(g::CallGraph{T}, i::Int) where {T<:Complex} = g.nodes[i]
 
+# Get the left child of the node at index `i`
 leftNode(g::CallGraph, i::Int) = g[i+g[i].left]
 
+# Get the right child of the node at index `i`
 rightNode(g::CallGraph, i::Int) = g[i+g[i].right]
 
-struct CompositeFFT <: AbstractFFTType end
-
-struct Pow2FFT <: AbstractFFTType end
-
-struct DFT <: AbstractFFTType end
-
+# Recursively instantiate a set of `CallGraphNode`s
 function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{Vector{T}})::Int where {T<:Complex}
     facs = factor(N)
     Ns = [first(x) for x in collect(facs) for _ in 1:last(x)]
@@ -98,6 +89,7 @@ function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{
     return 1 + left_len + right_len
 end
 
+# Instantiate a CallGraph from a number `N`
 function CallGraph{T}(N::Int) where {T<:Complex}
     nodes = CallGraphNode[]
     workspace = Vector{Vector{T}}()
@@ -110,6 +102,22 @@ function fft(x::AbstractVector{T}) where {T<:Complex}
     g = CallGraph{T}(length(x))
     fft!(y, x, Val(FFT_FORWARD), g[1].type, g, 1)
     y
+end
+
+function fft(x::AbstractMatrix{T}) where {T<:Complex}
+    M,N = size(x)
+    y1 = similar(x)
+    y2 = similar(x)
+    g1 = CallGraph{T}(size(x,1))
+    g2 = CallGraph{T}(size(x,2))
+
+    for k in 1:N
+        @views fft!(y1[:,k],  x[:,k], Val(FFT_FORWARD), g1[1].type, g1, 1)
+    end
+
+    for k in 1:M
+        @views fft!(y2[k,:], y1[k,:], Val(FFT_FORWARD), g2[1].type, g2, 1)
+    end
 end
 
 fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{<:Direction}, ::AbstractFFTType, ::CallGraph{T}, ::Int) where {T} = nothing

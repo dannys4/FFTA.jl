@@ -4,6 +4,7 @@ authors = ["Danny Sharp <dannys4@mit.edu> and contributors"]
 version = "0.1.0"
 
 [deps]
+AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
 Primes = "27ebfcd6-29c5-5fa9-bf4b-fb8fc14df3ae"
