@@ -5,9 +5,12 @@ This is a *pure Julia* implementation of FFTs, with the goal that this could sup
 
 Path Forward:
 - Dispatch on `Real`
+- `@inbounds` use
+- Instead of `@view`, just `vec` and `ArrayInterfaces.restructure` and then use `CPtr` instead.
+- Use `StaticArrays` for the workspace in small cases
+- Strictly generate code for certain cases
 - Create a SIMD type for Complex numbers
 - E-Graphs for the call-graph
-- Instead of `@view`, just `vec` and `ArrayInterfaces.restructure` and then use `CPtr` instead.
 - Accelerate dynamic dispatching?
 - Other performance left on the table....
 
