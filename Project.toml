@@ -6,10 +6,10 @@ version = "0.1.0"
 [deps]
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 Primes = "27ebfcd6-29c5-5fa9-bf4b-fb8fc14df3ae"
-ReTest = "e0db7c4e-2690-44b9-bad6-7687da720f89"
 
 [compat]
 DocStringExtensions = "0.8"
+Primes = "0.5"
 julia = "1"
 
 [extras]

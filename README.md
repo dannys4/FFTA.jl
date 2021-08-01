@@ -12,9 +12,9 @@ Path Forward:
 - Other performance left on the table....
 
 Interface:
-`fft(x::AbstractVector{<:Complex})`-- Forward FFT
-`fft(x::AbstractMatrix{<:Complex})`-- Forward FFT
-`bfft(x::AbstractVector{<:Complex})`-- Backward FFT (unscaled inverse FFT)
-`bfft(x::AbstractMatrix{<:Complex})`-- Backward FFT (unscaled inverse FFT)
+- `fft(x::AbstractVector{<:Complex})`-- Forward FFT
+- `fft(x::AbstractMatrix{<:Complex})`-- Forward FFT
+- `bfft(x::AbstractVector{<:Complex})`-- Backward FFT (unscaled inverse FFT)
+- `bfft(x::AbstractMatrix{<:Complex})`-- Backward FFT (unscaled inverse FFT)
 
 NOTE: Currently, my C++ code is actually faster than this, so "Fastest Fourier Transform in my Apartment" is a bit of a misnomer.
