@@ -1,6 +1,6 @@
 module FFTA
 
-using Primes, DocStringExtensions
+using Primes, DocStringExtensions, LoopVectorization
 import Base: getindex
 export fft, bfft
 
