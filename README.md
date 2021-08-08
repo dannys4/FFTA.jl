@@ -5,7 +5,8 @@ This is a *pure Julia* implementation of FFTs, with the goal that this could sup
 
 Path Forward:
 - Make the code more readable.
-- `@inbounds` use
+- Use `@inbounds`
+- Use `AbstractFFTs` interface
 - Instead of `@view`, just `vec` and `ArrayInterfaces.restructure` and then use `CPtr` instead.
 - Use `StaticArrays` for the workspace in small cases
 - Strictly generate code for certain cases
