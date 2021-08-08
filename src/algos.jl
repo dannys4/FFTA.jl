@@ -51,7 +51,7 @@ struct CallGraph{T<:Complex}
 end
 
 # Get the node in the graph at index i
-Base.getindex(g::CallGraph{T}, i::Int) where {T<:Complex} = g.nodes[i]
+Base.getindex(g::CallGraph{T}, i::Int) where {T} = g.nodes[i]
 
 # Get the left child of the node at index `i`
 leftNode(g::CallGraph, i::Int) = g[i+g[i].left]
@@ -60,7 +60,7 @@ leftNode(g::CallGraph, i::Int) = g[i+g[i].left]
 rightNode(g::CallGraph, i::Int) = g[i+g[i].right]
 
 # Recursively instantiate a set of `CallGraphNode`s
-function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{Vector{T}})::Int where {T<:Complex}
+function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{Vector{T}})::Int where {T}
     facs = factor(N)
     Ns = [first(x) for x in collect(facs) for _ in 1:last(x)]
     if length(Ns) == 1 || Ns[end] == 2
@@ -90,21 +90,21 @@ function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{
 end
 
 # Instantiate a CallGraph from a number `N`
-function CallGraph{T}(N::Int) where {T<:Complex}
+function CallGraph{T}(N::Int) where {T}
     nodes = CallGraphNode[]
     workspace = Vector{Vector{T}}()
     CallGraphNode!(nodes, N, workspace)
     CallGraph(nodes, workspace)
 end
 
-function fft(x::AbstractVector{T}) where {T<:Complex}
+function fft(x::AbstractVector{T}) where {T}
     y = similar(x)
     g = CallGraph{T}(length(x))
     fft!(y, x, Val(FFT_FORWARD), g[1].type, g, 1)
     y
 end
 
-function fft(x::AbstractMatrix{T}) where {T<:Complex}
+function fft(x::AbstractMatrix{T}) where {T}
     M,N = size(x)
     y1 = similar(x)
     y2 = similar(x)
@@ -121,14 +121,14 @@ function fft(x::AbstractMatrix{T}) where {T<:Complex}
     y2
 end
 
-function bfft(x::AbstractVector{T}) where {T<:Complex}
+function bfft(x::AbstractVector{T}) where {T}
     y = similar(x)
     g = CallGraph{T}(length(x))
     fft!(y, x, Val(FFT_BACKWARD), g[1].type, g, 1)
     y
 end
 
-function bfft(x::AbstractMatrix{T}) where {T<:Complex}
+function bfft(x::AbstractMatrix{T}) where {T}
     M,N = size(x)
     y1 = similar(x)
     y2 = similar(x)
@@ -155,7 +155,7 @@ function (g::CallGraph{T})(out::AbstractVector{T}, in::AbstractVector{T}, v::Val
     fft!(out, in, v, t, g, idx)
 end
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::CompositeFFT, g::CallGraph{T}, idx::Int) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::CompositeFFT, g::CallGraph{T}, idx::Int) where {T}
     N = length(out)
     left = leftNode(g,idx)
     right = rightNode(g,idx)
@@ -180,7 +180,7 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD},
     end
 end
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::CompositeFFT, g::CallGraph{T}, idx::Int) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::CompositeFFT, g::CallGraph{T}, idx::Int) where {T}
     N = length(out)
     left = left(g,i)
     right = right(g,i)
@@ -205,11 +205,11 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}
     end
 end
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::Pow2FFT, ::CallGraph{T}, ::Int) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::Pow2FFT, ::CallGraph{T}, ::Int) where {T}
     fft_pow2!(out, in, Val(FFT_FORWARD))
 end
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::Pow2FFT, ::CallGraph{T}, ::Int) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::Pow2FFT, ::CallGraph{T}, ::Int) where {T}
     fft_pow2!(out, in, Val(FFT_BACKWARD))
 end
 
@@ -217,7 +217,7 @@ end
 Power of 2 FFT in place, forward
 
 """
-function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T<:Complex}
+function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T}
     N = length(out)
     if N == 1
         out[1] = in[1]
@@ -241,7 +241,7 @@ end
 Power of 2 FFT in place, backward
 
 """
-function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T<:Complex}
+function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T}
     N = length(out)
     if N == 1
         out[1] = in[1]
@@ -261,7 +261,7 @@ function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACK
     end
 end
 
-function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T<:Complex}
+function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T}
     N = length(out)
     inc = 2*π/N
     wn² = wn = w = convert(T, cispi(2/N))
@@ -313,7 +313,7 @@ function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKW
     out[(N-halfN+2):end] .= conj.(out[halfN:-1:2])
 end
 
-function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T<:Complex}
+function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T}
     N = length(out)
     wn² = wn = w = convert(T, cispi(-2/N))
     wn_1 = one(T)
@@ -365,10 +365,10 @@ function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWA
 end
 
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::DFT, ::CallGraph{T}, ::Int) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::DFT, ::CallGraph{T}, ::Int) where {T}
     fft_dft!(out, in, Val(FFT_FORWARD))
 end
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::DFT, ::CallGraph{T}, ::Int) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::DFT, ::CallGraph{T}, ::Int) where {T}
     fft_dft!(out, in, Val(FFT_BACKWARD))
 end
