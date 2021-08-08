@@ -162,9 +162,8 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD},
     N1 = left.sz
     N2 = right.sz
 
-    inc = 2*π/N
-    w1 = T(cos(inc), -sin(inc))
-    wj1 = T(1, 0)
+    w1 = convert(T, cispi(-2/N))
+    wj1 = one(T)
     tmp = g.workspace[idx]
     for j1 in 1:N1
         wk2 = wj1;
@@ -188,9 +187,8 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}
     N1 = left.sz
     N2 = right.sz
 
-    inc = 2*π/N
-    w1 = T(cos(inc), sin(inc))
-    wj1 = T(1, 0)
+    w1 = convert(T, cispi(2/N))
+    wj1 = one(T)
     tmp = g.workspace[idx]
     for j1 in 2:N1
         Complex<F,L> wk2 = wj1;
@@ -228,9 +226,8 @@ function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORW
     fft_pow2!(@view(out[1:(end÷2)]),     @view(in[1:2:end]), Val(FFT_FORWARD))
     fft_pow2!(@view(out[(end÷2+1):end]), @view(in[2:2:end]), Val(FFT_FORWARD))
 
-    inc = 2*π/N
-    w1 = T(cos(inc), -sin(inc));
-    wj = T(1,0)
+    w1 = convert(T, cispi(-2/N))
+    wj = one(T)
     m = N ÷ 2
     for j in 1:m
         out_j    = out[j]
@@ -253,9 +250,8 @@ function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACK
     fft_pow2!(@view(out[1:(end÷2)]),     @view(in[1:2:end]), Val(FFT_BACKWARD))
     fft_pow2!(@view(out[(end÷2+1):end]), @view(in[2:2:end]), Val(FFT_BACKWARD))
 
-    inc = 2*π/N
-    w1 = T(cos(inc), sin(inc));
-    wj = T(1,0)
+    w1 = convert(T, cispi(2/N))
+    wj = one(T)
     m = N ÷ 2
     for j in 1:m
         out_j    = out[j]
@@ -268,8 +264,8 @@ end
 function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T<:Complex}
     N = length(out)
     inc = 2*π/N
-    wn² = wn = w = T(cos(inc), sin(inc))
-    wn_1 = T(1., 0.)
+    wn² = wn = w = convert(T, cispi(2/N))
+    wn_1 = one(T)
 
     tmp = in[1]
     out .= tmp
@@ -291,11 +287,36 @@ function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKW
     end
 end
 
+function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T<:Real}
+    N = length(out)
+    halfN = N÷2
+    wn² = wn = w = convert(T, cispi(2/N))
+    wn_1 = one(T)
+
+    out .= in[1]
+    out[1] = sum(in)
+    iseven(N) && out[halfN+1] = foldr(-,in)
+
+    wk = wn²;
+    for d in 2:halfN
+        out[d] = in[d]*wk + out[d]
+        for k in (d+1):halfN
+            wk *= wn
+            out[d] = in[k]*wk + out[d]
+            out[k] = in[d]*wk + out[k]
+        end
+        wn_1 = wn
+        wn *= w
+        wn² *= (wn*wn_1)
+        wk = wn²
+    end
+    out[(N-halfN+2):end] .= conj.(out[halfN:-1:2])
+end
+
 function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T<:Complex}
     N = length(out)
-    inc = 2*π/N
-    wn² = wn = w = T(cos(inc), -sin(inc));
-    wn_1 = T(1., 0.);
+    wn² = wn = w = convert(T, cispi(-2/N))
+    wn_1 = one(T)
 
     tmp = in[1];
     out .= tmp;
@@ -315,6 +336,32 @@ function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWA
         wn² *= (wn*wn_1)
         wk = wn²
     end
+end
+
+function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T<:Real}
+    N = length(out)
+    halfN = N÷2
+    wn² = wn = w = convert(T, cispi(-2/N))
+    wn_1 = one(T)
+
+    out .= in[1]
+    out[1] = sum(in)
+    iseven(N) && out[halfN+1] = foldr(-,in)
+
+    wk = wn²;
+    for d in 2:halfN
+        out[d] = in[d]*wk + out[d]
+        for k in (d+1):halfN
+            wk *= wn
+            out[d] = in[k]*wk + out[d]
+            out[k] = in[d]*wk + out[k]
+        end
+        wn_1 = wn
+        wn *= w
+        wn² *= (wn*wn_1)
+        wk = wn²
+    end
+    out[(N-halfN+2):end] .= conj.(out[halfN:-1:2])
 end
 
 
