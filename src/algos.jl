@@ -1,6 +1,14 @@
 @enum Direction FFT_FORWARD FFT_BACKWARD
 abstract type AbstractFFTType end
 
+function alternatingSum(x::AbstractVector{T}) where T
+    y = x[1]
+    @turbo for i in 2:length(x)
+        y += (x[i] * convert(T,(2 * (i % 2) - 1)))
+    end
+    y
+end
+
 # Represents a Composite Cooley-Tukey FFT
 struct CompositeFFT <: AbstractFFTType end
 
@@ -51,7 +59,7 @@ struct CallGraph{T<:Complex}
 end
 
 # Get the node in the graph at index i
-Base.getindex(g::CallGraph{T}, i::Int) where {T<:Complex} = g.nodes[i]
+Base.getindex(g::CallGraph{T}, i::Int) where {T} = g.nodes[i]
 
 # Get the left child of the node at index `i`
 leftNode(g::CallGraph, i::Int) = g[i+g[i].left]
@@ -60,7 +68,7 @@ leftNode(g::CallGraph, i::Int) = g[i+g[i].left]
 rightNode(g::CallGraph, i::Int) = g[i+g[i].right]
 
 # Recursively instantiate a set of `CallGraphNode`s
-function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{Vector{T}})::Int where {T<:Complex}
+function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{Vector{T}})::Int where {T}
     facs = factor(N)
     Ns = [first(x) for x in collect(facs) for _ in 1:last(x)]
     if length(Ns) == 1 || Ns[end] == 2
@@ -90,21 +98,28 @@ function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{
 end
 
 # Instantiate a CallGraph from a number `N`
-function CallGraph{T}(N::Int) where {T<:Complex}
+function CallGraph{T}(N::Int) where {T}
     nodes = CallGraphNode[]
     workspace = Vector{Vector{T}}()
     CallGraphNode!(nodes, N, workspace)
     CallGraph(nodes, workspace)
 end
 
-function fft(x::AbstractVector{T}) where {T<:Complex}
+function fft(x::AbstractVector{T}) where {T}
     y = similar(x)
     g = CallGraph{T}(length(x))
     fft!(y, x, Val(FFT_FORWARD), g[1].type, g, 1)
     y
 end
 
-function fft(x::AbstractMatrix{T}) where {T<:Complex}
+function fft(x::AbstractVector{T}) where {T <: Real}
+    y = similar(x, Complex{T})
+    g = CallGraph{Complex{T}}(length(x))
+    fft!(y, x, Val(FFT_FORWARD), g[1].type, g, 1)
+    y
+end
+
+function fft(x::AbstractMatrix{T}) where {T}
     M,N = size(x)
     y1 = similar(x)
     y2 = similar(x)
@@ -121,14 +136,14 @@ function fft(x::AbstractMatrix{T}) where {T<:Complex}
     y2
 end
 
-function bfft(x::AbstractVector{T}) where {T<:Complex}
+function bfft(x::AbstractVector{T}) where {T}
     y = similar(x)
     g = CallGraph{T}(length(x))
     fft!(y, x, Val(FFT_BACKWARD), g[1].type, g, 1)
     y
 end
 
-function bfft(x::AbstractMatrix{T}) where {T<:Complex}
+function bfft(x::AbstractMatrix{T}) where {T}
     M,N = size(x)
     y1 = similar(x)
     y2 = similar(x)
@@ -147,24 +162,23 @@ end
 
 fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{<:Direction}, ::AbstractFFTType, ::CallGraph{T}, ::Int) where {T} = nothing
 
-function (g::CallGraph{T})(out::AbstractVector{T}, in::AbstractVector{T}, v::Val{FFT_FORWARD}, t::AbstractFFTType, idx::Int) where {T}
+function (g::CallGraph{T})(out::AbstractVector{T}, in::AbstractVector{U}, v::Val{FFT_FORWARD}, t::AbstractFFTType, idx::Int) where {T,U}
     fft!(out, in, v, t, g, idx)
 end
 
-function (g::CallGraph{T})(out::AbstractVector{T}, in::AbstractVector{T}, v::Val{FFT_BACKWARD}, t::AbstractFFTType, idx::Int) where {T}
+function (g::CallGraph{T})(out::AbstractVector{T}, in::AbstractVector{U}, v::Val{FFT_BACKWARD}, t::AbstractFFTType, idx::Int) where {T,U}
     fft!(out, in, v, t, g, idx)
 end
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::CompositeFFT, g::CallGraph{T}, idx::Int) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{U}, ::Val{FFT_FORWARD}, ::CompositeFFT, g::CallGraph{T}, idx::Int) where {T,U}
     N = length(out)
     left = leftNode(g,idx)
     right = rightNode(g,idx)
     N1 = left.sz
     N2 = right.sz
 
-    inc = 2*π/N
-    w1 = T(cos(inc), -sin(inc))
-    wj1 = T(1, 0)
+    w1 = convert(T, cispi(-2/N))
+    wj1 = one(T)
     tmp = g.workspace[idx]
     for j1 in 1:N1
         wk2 = wj1;
@@ -181,16 +195,15 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD},
     end
 end
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::CompositeFFT, g::CallGraph{T}, idx::Int) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{U}, ::Val{FFT_BACKWARD}, ::CompositeFFT, g::CallGraph{T}, idx::Int) where {T,U}
     N = length(out)
     left = left(g,i)
     right = right(g,i)
     N1 = left.sz
     N2 = right.sz
 
-    inc = 2*π/N
-    w1 = T(cos(inc), sin(inc))
-    wj1 = T(1, 0)
+    w1 = convert(T, cispi(2/N))
+    wj1 = one(T)
     tmp = g.workspace[idx]
     for j1 in 2:N1
         Complex<F,L> wk2 = wj1;
@@ -207,11 +220,11 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}
     end
 end
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::Pow2FFT, ::CallGraph{T}, ::Int) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{U}, ::Val{FFT_FORWARD}, ::Pow2FFT, ::CallGraph{T}, ::Int) where {T,U}
     fft_pow2!(out, in, Val(FFT_FORWARD))
 end
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::Pow2FFT, ::CallGraph{T}, ::Int) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{U}, ::Val{FFT_BACKWARD}, ::Pow2FFT, ::CallGraph{T}, ::Int) where {T,U}
     fft_pow2!(out, in, Val(FFT_BACKWARD))
 end
 
@@ -219,7 +232,7 @@ end
 Power of 2 FFT in place, forward
 
 """
-function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T<:Complex}
+function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T}
     N = length(out)
     if N == 1
         out[1] = in[1]
@@ -228,9 +241,8 @@ function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORW
     fft_pow2!(@view(out[1:(end÷2)]),     @view(in[1:2:end]), Val(FFT_FORWARD))
     fft_pow2!(@view(out[(end÷2+1):end]), @view(in[2:2:end]), Val(FFT_FORWARD))
 
-    inc = 2*π/N
-    w1 = T(cos(inc), -sin(inc));
-    wj = T(1,0)
+    w1 = convert(T, cispi(-2/N))
+    wj = one(T)
     m = N ÷ 2
     for j in 1:m
         out_j    = out[j]
@@ -244,7 +256,7 @@ end
 Power of 2 FFT in place, backward
 
 """
-function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T<:Complex}
+function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T}
     N = length(out)
     if N == 1
         out[1] = in[1]
@@ -253,9 +265,8 @@ function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACK
     fft_pow2!(@view(out[1:(end÷2)]),     @view(in[1:2:end]), Val(FFT_BACKWARD))
     fft_pow2!(@view(out[(end÷2+1):end]), @view(in[2:2:end]), Val(FFT_BACKWARD))
 
-    inc = 2*π/N
-    w1 = T(cos(inc), sin(inc));
-    wj = T(1,0)
+    w1 = convert(T, cispi(2/N))
+    wj = one(T)
     m = N ÷ 2
     for j in 1:m
         out_j    = out[j]
@@ -265,37 +276,58 @@ function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACK
     end
 end
 
-function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T<:Complex}
+"""
+Power of 2 FFT in place, forward
+
+"""
+function fft_pow2!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T<:Real}
     N = length(out)
-    inc = 2*π/N
-    wn² = wn = w = T(cos(inc), sin(inc))
-    wn_1 = T(1., 0.)
+    if N == 1
+        out[1] = in[1]
+        return
+    end
+    fft_pow2!(@view(out[1:(end÷2)]),     @view(in[1:2:end]), Val(FFT_FORWARD))
+    fft_pow2!(@view(out[(end÷2+1):end]), @view(in[2:2:end]), Val(FFT_FORWARD))
 
-    tmp = in[1]
-    out .= tmp
-    tmp = sum(in)
-    out[1] = tmp
-
-    wk = wn²;
-    for d in 2:N
-        out[d] = in[d]*wk + out[d]
-        for k in (d+1):N
-            wk *= wn
-            out[d] = in[k]*wk + out[d]
-            out[k] = in[d]*wk + out[k]
-        end
-        wn_1 = wn
-        wn *= w
-        wn² *= (wn*wn_1)
-        wk = wn²
+    w1 = convert(Complex{T}, cispi(-2/N))
+    wj = one(Complex{T})
+    m = N ÷ 2
+    @turbo for j in 2:m
+        out[j] = out[j] + wj*out[j+m]
+        wj *= w1
+    end
+    @turbo for j in 2:m
+        out[m+j] = conj(out[m-j+2])
     end
 end
 
-function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T<:Complex}
+"""
+Power of 2 FFT in place, backward
+
+"""
+function fft_pow2!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T<:Real}
     N = length(out)
-    inc = 2*π/N
-    wn² = wn = w = T(cos(inc), -sin(inc));
-    wn_1 = T(1., 0.);
+    if N == 1
+        out[1] = in[1]
+        return
+    end
+    fft_pow2!(@view(out[1:(end÷2)]),     @view(in[1:2:end]), Val(FFT_BACKWARD))
+    fft_pow2!(@view(out[(end÷2+1):end]), @view(in[2:2:end]), Val(FFT_BACKWARD))
+
+    w1 = convert(Complex{T}, cispi(2/N))
+    wj = one(Complex{T})
+    m = N ÷ 2
+    @turbo for j in 2:m
+        out[j] = out[j] + wj*out[j+m]
+        out[m+j] = conj(out[m-i+2])
+        wj *= w1
+    end
+end
+
+function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T}
+    N = length(out)
+    wn² = wn = w = convert(T, cispi(-2/N))
+    wn_1 = one(T)
 
     tmp = in[1];
     out .= tmp;
@@ -317,11 +349,86 @@ function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWA
     end
 end
 
+function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T}
+    N = length(out)
+    wn² = wn = w = convert(T, cispi(2/N))
+    wn_1 = one(T)
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}, ::DFT, ::CallGraph{T}, ::Int) where {T<:Complex}
+    tmp = in[1]
+    out .= tmp
+    tmp = sum(in)
+    out[1] = tmp
+
+    wk = wn²;
+    for d in 2:N
+        out[d] = in[d]*wk + out[d]
+        for k in (d+1):N
+            wk *= wn
+            out[d] = in[k]*wk + out[d]
+            out[k] = in[d]*wk + out[k]
+        end
+        wn_1 = wn
+        wn *= w
+        wn² *= (wn*wn_1)
+        wk = wn²
+    end
+end
+
+function fft_dft!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T<:Real}
+    N = length(out)
+    halfN = N÷2
+    wk = wkn = w = convert(Complex{T}, cispi(-2/N))
+
+    out[2:N] .= in[1]
+    out[1] = sum(in)
+    iseven(N) && (out[halfN+1] = alternatingSum(in))
+    
+    for d in 2:halfN+1
+        tmp = in[1]
+        for k in 2:N
+            tmp += wkn*in[k]
+            wkn *= wk
+        end
+        out[d] = tmp
+        wk *= w
+        wkn = wk
+    end
+    @turbo for i in 0:halfN-1
+        out[N-i] = conj(out[halfN-i])
+    end
+end
+
+function fft_dft!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T<:Real}
+    N = length(out)
+    halfN = N÷2
+    wn² = wn = w = convert(Complex{T}, cispi(2/N))
+    wn_1 = one(T)
+
+    out .= in[1]
+    out[1] = sum(in)
+    iseven(N) && (out[halfN+1] = alternatingSum(in))
+
+    wk = wn²;
+    for d in 2:halfN
+        out[d] = in[d]*wk + out[d]
+        for k in (d+1):halfN
+            wk *= wn
+            out[d] = in[k]*wk + out[d]
+            out[k] = in[d]*wk + out[k]
+        end
+        wn_1 = wn
+        wn *= w
+        wn² *= (wn*wn_1)
+        wk = wn²
+    end
+    out[(N-halfN+2):end] .= conj.(out[halfN:-1:2])
+end
+
+
+function fft!(out::AbstractVector{T}, in::AbstractVector{U}, ::Val{FFT_FORWARD}, ::DFT, ::CallGraph{T}, ::Int) where {T,U}
     fft_dft!(out, in, Val(FFT_FORWARD))
 end
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}, ::DFT, ::CallGraph{T}, ::Int) where {T<:Complex}
+function fft!(out::AbstractVector{T}, in::AbstractVector{U}, ::Val{FFT_BACKWARD}, ::DFT, ::CallGraph{T}, ::Int) where {T,U}
     fft_dft!(out, in, Val(FFT_BACKWARD))
 end
