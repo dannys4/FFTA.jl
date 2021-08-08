@@ -1,10 +1,10 @@
 # FFTA: Fastest Fourier Transform in my Apartment
 ## A library by Danny Sharp
 
-This is a *pure Julia* implementation of FFTs, with the goal that this could supplant other FFTs for applications that require odd Julia objects. Currently this supports `AbstractArray{T,N}` where `N` in `{1,2}` (i.e. `AbstractVector` and `AbstractMatrix`). If you're looking for more performance, checkout `FFTW.jl`. The only functions that need to be defined with `T` (besides arithmetic) are `convert(T, x::ComplexF64)` and `one(T)`. This means that `T<:Real` probably doesn't work yet (see Path Forward).
+This is a *pure Julia* implementation of FFTs, with the goal that this could supplant other FFTs for applications that require odd Julia objects. Currently this supports `AbstractArray{T,N}` where `N` in `{1,2}` (i.e. `AbstractVector` and `AbstractMatrix`). If you're looking for more performance, checkout `FFTW.jl`. Regardless of `T`, `one(::Type{T})` must be defined. Additionally, if `T<:Complex`, then `convert(::Type{T},ComplexF64)` has to be defined and if `T<:Real`, then `convert(::Type{T}, Float64)` has to be defined.
 
 Path Forward:
-- Dispatch on `Real`
+- Make the code more readable.
 - `@inbounds` use
 - Instead of `@view`, just `vec` and `ArrayInterfaces.restructure` and then use `CPtr` instead.
 - Use `StaticArrays` for the workspace in small cases
