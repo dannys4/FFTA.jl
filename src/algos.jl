@@ -26,17 +26,17 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{U}, ::Val{FFT_FORWARD},
     w1 = convert(T, cispi(-2/N))
     wj1 = one(T)
     tmp = g.workspace[idx]
-    for j1 in 1:N1
+    @inbounds for j1 in 1:N1
         wk2 = wj1;
         @views g(tmp[(N2*(j1-1) + 1):(N2*j1)], in[j1:N1:end], Val(FFT_FORWARD), right.type, idx + g[idx].right)
-        j1 > 1 && for k2 in 2:N2
+        j1 > 1 && @inbounds for k2 in 2:N2
             tmp[N2*(j1-1) + k2] *= wk2
             wk2 *= wj1
         end
         wj1 *= w1
     end
 
-    for k2 in 1:N2
+    @inbounds for k2 in 1:N2
         @views g(out[k2:N2:end], tmp[k2:N2:end], Val(FFT_FORWARD), left.type, idx + g[idx].left)
     end
 end
@@ -51,17 +51,17 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{U}, ::Val{FFT_BACKWARD}
     w1 = convert(T, cispi(2/N))
     wj1 = one(T)
     tmp = g.workspace[idx]
-    for j1 in 2:N1
+    @inbounds for j1 in 2:N1
         Complex<F,L> wk2 = wj1;
         @views g(tmp[j1:N1:end], in[N2*j1:N2*(j1-1)-1], Val(FFT_BACKWARD), right.type, idx + g[idx].right)
-        for k2 in 2:N2
+        @inbounds for k2 in 2:N2
             tmp[j1*N2+k2] *= wk2
             wk2 *= wj1
         end
         wj1 *= w1
     end
 
-    for k2 in 1:N2
+    @inbounds for k2 in 1:N2
         @views g(out[k2:N2:end], tmp[k2:N2:end], Val(FFT_BACKWARD), left.type, idx + g[idx].left)
     end
 end
@@ -80,8 +80,9 @@ Power of 2 FFT in place, forward
 """
 function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T}
     N = length(out)
-    if N == 1
-        out[1] = in[1]
+    if N == 2
+        out[1] = in[1] + in[2]
+        out[2] = in[1] - in[2]
         return
     end
     fft_pow2!(@view(out[1:(end÷2)]),     @view(in[1:2:end]), Val(FFT_FORWARD))
@@ -90,7 +91,7 @@ function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORW
     w1 = convert(T, cispi(-2/N))
     wj = one(T)
     m = N ÷ 2
-    for j in 1:m
+    @inbounds for j in 1:m
         out_j    = out[j]
         out[j]   = out_j + wj*out[j+m]
         out[j+m] = out_j - wj*out[j+m]
@@ -104,8 +105,9 @@ Power of 2 FFT in place, backward
 """
 function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T}
     N = length(out)
-    if N == 1
-        out[1] = in[1]
+    if N == 2
+        out[1] = in[1] + in[2]
+        out[2] = in[1] - in[2]
         return
     end
     fft_pow2!(@view(out[1:(end÷2)]),     @view(in[1:2:end]), Val(FFT_BACKWARD))
@@ -114,7 +116,7 @@ function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACK
     w1 = convert(T, cispi(2/N))
     wj = one(T)
     m = N ÷ 2
-    for j in 1:m
+    @inbounds for j in 1:m
         out_j    = out[j]
         out[j]   = out_j + wj*out[j+m]
         out[j+m] = out_j - wj*out[j+m]
@@ -128,8 +130,9 @@ Power of 2 FFT in place, forward
 """
 function fft_pow2!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, ::Val{FFT_FORWARD}) where {T<:Real}
     N = length(out)
-    if N == 1
-        out[1] = in[1]
+    if N == 2
+        out[1] = in[1] + in[2]
+        out[2] = in[1] - in[2]
         return
     end
     fft_pow2!(@view(out[1:(end÷2)]),     @view(in[1:2:end]), Val(FFT_FORWARD))
@@ -138,11 +141,11 @@ function fft_pow2!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, ::Val
     w1 = convert(Complex{T}, cispi(-2/N))
     wj = one(Complex{T})
     m = N ÷ 2
-    @turbo for j in 2:m
+    @inbounds @turbo for j in 2:m
         out[j] = out[j] + wj*out[j+m]
         wj *= w1
     end
-    @turbo for j in 2:m
+    @inbounds @turbo for j in 2:m
         out[m+j] = conj(out[m-j+2])
     end
 end
@@ -153,8 +156,9 @@ Power of 2 FFT in place, backward
 """
 function fft_pow2!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, ::Val{FFT_BACKWARD}) where {T<:Real}
     N = length(out)
-    if N == 1
-        out[1] = in[1]
+    if N == 2
+        out[1] = in[1] + in[2]
+        out[2] = in[1] - in[2]
         return
     end
     fft_pow2!(@view(out[1:(end÷2)]),     @view(in[1:2:end]), Val(FFT_BACKWARD))
@@ -163,7 +167,7 @@ function fft_pow2!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, ::Val
     w1 = convert(Complex{T}, cispi(2/N))
     wj = one(Complex{T})
     m = N ÷ 2
-    @turbo for j in 2:m
+    @inbounds @turbo for j in 2:m
         out[j] = out[j] + wj*out[j+m]
         out[m+j] = conj(out[m-i+2])
         wj *= w1
@@ -175,15 +179,15 @@ function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_FORWA
     wn² = wn = w = convert(T, cispi(-2/N))
     wn_1 = one(T)
 
-    tmp = in[1];
-    out .= tmp;
+    tmp = in[1]
+    out .= tmp
     tmp = sum(in)
-    out[1] = tmp;
+    out[1] = tmp
 
-    wk = wn²;
-    for d in 2:N
+    wk = wn²
+    @inbounds for d in 2:N
         out[d] = in[d]*wk + out[d]
-        for k in (d+1):N
+        @inbounds for k in (d+1):N
             wk *= wn
             out[d] = in[k]*wk + out[d]
             out[k] = in[d]*wk + out[k]
@@ -205,10 +209,10 @@ function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Val{FFT_BACKW
     tmp = sum(in)
     out[1] = tmp
 
-    wk = wn²;
-    for d in 2:N
+    wk = wn²
+    @inbounds @turbo for d in 2:N
         out[d] = in[d]*wk + out[d]
-        for k in (d+1):N
+        @inbounds for k in (d+1):N
             wk *= wn
             out[d] = in[k]*wk + out[d]
             out[k] = in[d]*wk + out[k]
@@ -229,9 +233,9 @@ function fft_dft!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, ::Val{
     out[1] = sum(in)
     iseven(N) && (out[halfN+1] = alternatingSum(in))
     
-    for d in 2:halfN+1
+    @inbounds @turbo for d in 2:halfN+1
         tmp = in[1]
-        for k in 2:N
+        @inbounds for k in 2:N
             tmp += wkn*in[k]
             wkn *= wk
         end
@@ -239,7 +243,7 @@ function fft_dft!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, ::Val{
         wk *= w
         wkn = wk
     end
-    @turbo for i in 0:halfN-1
+    @inbounds @turbo for i in 0:halfN-1
         out[N-i] = conj(out[halfN-i])
     end
 end
@@ -254,10 +258,10 @@ function fft_dft!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, ::Val{
     out[1] = sum(in)
     iseven(N) && (out[halfN+1] = alternatingSum(in))
 
-    wk = wn²;
-    for d in 2:halfN
+    wk = wn²
+    @inbounds @turbo for d in 2:halfN
         out[d] = in[d]*wk + out[d]
-        for k in (d+1):halfN
+        @inbounds for k in (d+1):halfN
             wk *= wn
             out[d] = in[k]*wk + out[d]
             out[k] = in[d]*wk + out[k]
