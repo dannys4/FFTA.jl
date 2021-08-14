@@ -1,4 +1,7 @@
-@enum Direction FFT_FORWARD FFT_BACKWARD
+abstract type Direction end
+struct FFT_FORWARD <: Direction end
+struct FFT_BACKWARD <: Direction end
+
 abstract type AbstractFFTType end
 
 # Represents a Composite Cooley-Tukey FFT
