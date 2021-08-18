@@ -6,7 +6,7 @@ function alternatingSum(x::AbstractVector{T}) where T
     y
 end
 
-fft!(out::AbstractVector{T}, in::AbstractVector{T}, ::Direction, ::AbstractFFTType, ::CallGraph{T}, ::Int) where {T} = nothing
+fft!(::AbstractVector{T}, ::AbstractVector{T}, ::Int, ::Int, ::Direction, ::AbstractFFTType, ::CallGraph{T}, ::Int) where {T} = nothing
 
 @inline function direction_sign(::FFT_BACKWARD)
     1
@@ -16,60 +16,73 @@ end
     -1
 end
 
-function (g::CallGraph{T})(out::AbstractVector{T}, in::AbstractVector{U}, v::Direction, t::AbstractFFTType, idx::Int) where {T,U}
-    fft!(out, in, v, t, g, idx)
+function (g::CallGraph{T})(out::AbstractVector{T}, in::AbstractVector{U}, start_out::Int, start_in::Int, v::Direction, t::AbstractFFTType, idx::Int) where {T,U}
+    fft!(out, in, start_out, start_in, v, t, g, idx)
 end
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{U}, d::Direction, ::CompositeFFT, g::CallGraph{T}, idx::Int) where {T,U}
-    N = length(out)
-    left = leftNode(g,idx)
-    right = rightNode(g,idx)
+function fft!(out::AbstractVector{T}, in::AbstractVector{U}, start_out::Int, start_in::Int, d::Direction, ::CompositeFFT, g::CallGraph{T}, idx::Int) where {T,U}
+    root = g[idx]
+    left_idx = idx + root.left
+    right_idx = idx + root.right
+    left = g[left_idx]
+    right = g[right_idx]
+    N  = root.sz
     N1 = left.sz
     N2 = right.sz
+    s_in = root.s_in
+    s_out = root.s_out
+    @info "" N N1 N2 s_in s_out start_in start_out
 
     w1 = convert(T, cispi(direction_sign(d)*2/N))
     wj1 = one(T)
     tmp = g.workspace[idx]
-    @inbounds for j1 in 1:N1
+    @inbounds for j1 in 0:N1-1
         wk2 = wj1;
-        @views g(tmp[(N2*(j1-1) + 1):(N2*j1)], in[j1:N1:end], d, right.type, idx + g[idx].right)
-        j1 > 1 && @inbounds for k2 in 2:N2
-            tmp[N2*(j1-1) + k2] *= wk2
+        g(tmp, in, N2*j1+1, start_in + j1*s_in, d, right.type, right_idx)
+        j1 > 0 && @inbounds for k2 in 2:N2
+            tmp[N2*j1 + k2] *= wk2
             wk2 *= wj1
         end
         wj1 *= w1
     end
 
     @inbounds for k2 in 1:N2
-        @views g(out[k2:N2:end], tmp[k2:N2:end], d, left.type, idx + g[idx].left)
+        g(out, tmp, start_out + (k2-1)*s_out, k2, d, left.type, left_idx)
     end
 end
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{U}, d::Direction, a::Pow2FFT, b::CallGraph{T}, c::Int) where {T,U}
-    fft_pow2!(out, in, d)
+function fft!(out::AbstractVector{T}, in::AbstractVector{U}, start_out::Int, start_in::Int, d::Direction, ::Pow2FFT, g::CallGraph{T}, idx::Int) where {T,U}
+    root = g[idx]
+    N = root.sz
+    s_in = root.s_in
+    s_out = root.s_out
+    fft_pow2!(out, in, N, start_out, s_out, start_in, s_in, d)
 end
 
 """
 Power of 2 FFT in place, complex
 
 """
-function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, d::Direction) where {T}
-    N = length(out)
+function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, N::Int, start_out::Int, stride_out::Int, start_in::Int, stride_in::Int, d::Direction) where {T}
+
     if N == 2
-        out[1] = in[1] + in[2]
-        out[2] = in[1] - in[2]
+        out[start_out]              = in[start_in] + in[start_in + stride_in]
+        out[start_out + stride_out] = in[start_in] - in[start_in + stride_in]
         return
     end
-    fft_pow2!(@view(out[1:(end÷2)]),     @view(in[1:2:end]), d)
-    fft_pow2!(@view(out[(end÷2+1):end]), @view(in[2:2:end]), d)
+    m = N ÷ 2
+
+    fft_pow2!(out, in, m, start_out               , stride_out, start_in            , stride_in*2, d)
+    fft_pow2!(out, in, m, start_out + m*stride_out, stride_out, start_in + stride_in, stride_in*2, d)
 
     w1 = convert(T, cispi(direction_sign(d)*2/N))
     wj = one(T)
-    m = N ÷ 2
-    @inbounds for j in 1:m
-        out_j    = out[j]
-        out[j]   = out_j + wj*out[j+m]
-        out[j+m] = out_j - wj*out[j+m]
+    @inbounds for j in 0:m-1
+        j1_out = start_out + j*stride_out
+        j2_out = start_out + (j+m)*stride_out
+        out_j    = out[j1_out]
+        out[j1_out] = out_j + wj*out[j2_out]
+        out[j2_out] = out_j - wj*out[j2_out]
         wj *= w1
     end
 end
@@ -78,45 +91,52 @@ end
 Power of 2 FFT in place, real
 
 """
-function fft_pow2!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, d::Direction) where {T<:Real}
-    N = length(out)
+function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, N::Int, start_out::Int, stride_out::Int, start_in::Int, stride_in::Int, d::Direction) where {T<:Real}
     if N == 2
         out[1] = in[1] + in[2]
         out[2] = in[1] - in[2]
         return
     end
-    fft_pow2!(@view(out[1:(end÷2)]),     @view(in[1:2:end]), d)
-    fft_pow2!(@view(out[(end÷2+1):end]), @view(in[2:2:end]), d)
+    m = N ÷ 2
+    fft_pow2!(out, in, m, start_out    , stride_out, start_in    , stride_in*2, d)
+    fft_pow2!(out, in, m, start_out + m, stride_out, start_in + 1, stride_in*2, d)
 
     w1 = convert(Complex{T}, cispi(direction_sign(d)*2/N))
     wj = one(Complex{T})
-    m = N ÷ 2
-    @inbounds @turbo for j in 2:m
-        out[j] = out[j] + wj*out[j+m]
+    @inbounds @turbo for j in 1:m-1
+        j1_out = start_out + j*stride_out
+        j2_out = start_out + (j+m)*stride_out
+        out[j1_out] = out[j1_out] + wj*out[j2_out]
         wj *= w1
     end
-    @inbounds @turbo for j in 2:m
-        out[m+j] = conj(out[m-j+2])
+    @inbounds @turbo for j in 1:m-1
+        j1_out = start_out + (j+m)*stride_out
+        j2_out = start_out + (m-j+1)*stride_out
+        out[j1_out] = conj(out[j2_out])
     end
 end
 
-function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, d::Direction) where {T}
-    N = length(out)
+function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, N::Int, start_out::Int, stride_out::Int, start_in::Int, stride_in::Int, d::Direction) where {T}
+    @info "" start_out stride_out start_in stride_in N
     wn² = wn = w = convert(T, cispi(direction_sign(d)*2/N))
     wn_1 = one(T)
 
-    tmp = in[1]
+    tmp = in[start_in]
     out .= tmp
-    tmp = sum(in)
-    out[1] = tmp
-
+    tmp = sum(@view in[start_in:stride_in:start_in+stride_in*(N-1)])
+    out[start_out] = tmp
+    
     wk = wn²
-    @inbounds for d in 2:N
-        out[d] = in[d]*wk + out[d]
-        @inbounds for k in (d+1):N
+    @inbounds for d in 1:N-1
+        d_in = start_in + d*stride_in
+        d_out = start_out + d*stride_out
+        out[d_out] = in[d_in]*wk + out[d_out]
+        @inbounds for k in d:N-1
+            k_in = start_in + k*stride_in
+            k_out = start_out + k*stride_out
             wk *= wn
-            out[d] = in[k]*wk + out[d]
-            out[k] = in[d]*wk + out[k]
+            out[d_out] = in[k_in]*wk + out[d_out]
+            out[k_out] = in[d_in]*wk + out[k_out]
         end
         wn_1 = wn
         wn *= w
@@ -125,30 +145,30 @@ function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, d::Direction) w
     end
 end
 
-function fft_dft!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, d::Direction) where {T<:Real}
-    N = length(out)
+function fft_dft!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, N::Int, start_out::Int, stride_out::Int, start_in::Int, stride_in::Int, d::Direction) where {T<:Real}
     halfN = N÷2
     wk = wkn = w = convert(Complex{T}, cispi(direction_sign(d)*2/N))
 
-    out[2:N] .= in[1]
-    out[1] = sum(in)
-    iseven(N) && (out[halfN+1] = alternatingSum(in))
+    out[start_out + 1:stride_out:start_out+stride_out*N] .= in[1]
+    out[1] = sum(@view in[start_in:stride_in:start_int+stride_out*N])
+    iseven(N) && (out[start_out + stride_out*halfN] = alternatingSum(@view in[start_in:stride_in:start_int+stride_out*N]))
     
     @inbounds for d in 2:halfN+1
-        tmp = in[1]
+        tmp = in[start_in]
         @inbounds for k in 2:N
-            tmp += wkn*in[k]
+            tmp += wkn*in[start_in + k*stride_in]
             wkn *= wk
         end
-        out[d] = tmp
+        out[start_out + d*stride_out] = tmp
         wk *= w
         wkn = wk
     end
     @inbounds @turbo for i in 0:halfN-1
-        out[N-i] = conj(out[halfN-i])
+        out[start_out + stride_out*(N-i)] = conj(out[start_out + stride_out*(halfN-i)])
     end
 end
 
-function fft!(out::AbstractVector{T}, in::AbstractVector{U}, d::Direction, ::DFT, ::CallGraph{T}, ::Int) where {T,U}
-    fft_dft!(out, in, d)
+function fft!(out::AbstractVector{T}, in::AbstractVector{U}, start_out::Int, start_in::Int, d::Direction, ::DFT, g::CallGraph{T}, idx::Int) where {T,U}
+    root = g[idx]
+    fft_dft!(out, in, root.sz, start_out, root.s_out, start_in, root.s_in, d)
 end

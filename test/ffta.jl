@@ -1,6 +1,7 @@
 using FFTA
 
-for N in [8, 11, 15, 100]
+# for N in [8, 11, 15, 100]
+for N in [8, 11, 15]
     x = zeros(ComplexF64, N)
     x[1] = 1
     y = fft(x)
