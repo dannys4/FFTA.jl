@@ -31,24 +31,24 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{U}, start_out::Int, sta
     N2 = right.sz
     s_in = root.s_in
     s_out = root.s_out
-    @info "" N N1 N2 s_in s_out start_in start_out
 
     w1 = convert(T, cispi(direction_sign(d)*2/N))
     wj1 = one(T)
     tmp = g.workspace[idx]
-    @inbounds for j1 in 0:N1-1
+    for j1 in 0:N1-1
         wk2 = wj1;
         g(tmp, in, N2*j1+1, start_in + j1*s_in, d, right.type, right_idx)
-        j1 > 0 && @inbounds for k2 in 2:N2
+        j1 > 0 && for k2 in 1:N2-1
             tmp[N2*j1 + k2] *= wk2
             wk2 *= wj1
         end
         wj1 *= w1
     end
 
-    @inbounds for k2 in 1:N2
-        g(out, tmp, start_out + (k2-1)*s_out, k2, d, left.type, left_idx)
+    for k2 in 0:N2-1
+        g(out, tmp, start_out + k2*s_out, k2+1, d, left.type, left_idx)
     end
+    out .+= 0
 end
 
 function fft!(out::AbstractVector{T}, in::AbstractVector{U}, start_out::Int, start_in::Int, d::Direction, ::Pow2FFT, g::CallGraph{T}, idx::Int) where {T,U}
@@ -117,31 +117,23 @@ function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, N::Int, start_
 end
 
 function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, N::Int, start_out::Int, stride_out::Int, start_in::Int, stride_in::Int, d::Direction) where {T}
-    @info "" start_out stride_out start_in stride_in N
-    wn² = wn = w = convert(T, cispi(direction_sign(d)*2/N))
-    wn_1 = one(T)
-
     tmp = in[start_in]
-    out .= tmp
-    tmp = sum(@view in[start_in:stride_in:start_in+stride_in*(N-1)])
+    @inbounds for j in 1:N-1
+        tmp += in[start_in + j*stride_in]
+    end
     out[start_out] = tmp
     
-    wk = wn²
+    wk = wkn = w = convert(T, cispi(direction_sign(d)*2/N))
+    
     @inbounds for d in 1:N-1
-        d_in = start_in + d*stride_in
-        d_out = start_out + d*stride_out
-        out[d_out] = in[d_in]*wk + out[d_out]
-        @inbounds for k in d:N-1
-            k_in = start_in + k*stride_in
-            k_out = start_out + k*stride_out
-            wk *= wn
-            out[d_out] = in[k_in]*wk + out[d_out]
-            out[k_out] = in[d_in]*wk + out[k_out]
+        tmp = in[start_in]
+        @inbounds for k in 1:N-1
+            tmp += wkn*in[start_in + k*stride_in]
+            wkn *= wk
         end
-        wn_1 = wn
-        wn *= w
-        wn² *= (wn*wn_1)
-        wk = wn²
+        out[start_out + d*stride_out] = tmp
+        wk *= w
+        wkn = wk
     end
 end
 
