@@ -9,7 +9,6 @@ Path Forward:
 - Make the code more readable.
 - Use `@inbounds`
 - Use `AbstractFFTs` interface
-- Instead of `@view`, just `vec` and `ArrayInterfaces.restructure` and then use `CPtr` instead.
 - Use `StaticArrays` for the workspace in small cases
 - Strictly generate code for certain cases
 - Create a SIMD type for Complex numbers
