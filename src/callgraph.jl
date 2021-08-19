@@ -1,4 +1,7 @@
-@enum Direction FFT_FORWARD FFT_BACKWARD
+abstract type Direction end
+struct FFT_FORWARD <: Direction end
+struct FFT_BACKWARD <: Direction end
+
 abstract type AbstractFFTType end
 
 # Represents a Composite Cooley-Tukey FFT
@@ -30,6 +33,8 @@ struct CallGraphNode
     right::Int
     type::AbstractFFTType
     sz::Int
+    s_in::Int
+    s_out::Int
 end
 
 """
@@ -60,12 +65,12 @@ leftNode(g::CallGraph, i::Int) = g[i+g[i].left]
 rightNode(g::CallGraph, i::Int) = g[i+g[i].right]
 
 # Recursively instantiate a set of `CallGraphNode`s
-function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{Vector{T}})::Int where {T}
+function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{Vector{T}}, s_in::Int, s_out::Int)::Int where {T}
     facs = factor(N)
     Ns = [first(x) for x in collect(facs) for _ in 1:last(x)]
     if length(Ns) == 1 || Ns[end] == 2
         push!(workspace, T[])
-        push!(nodes, CallGraphNode(0,0,Ns[end] == 2 ? Pow2FFT() : DFT(),N))
+        push!(nodes, CallGraphNode(0,0,Ns[end] == 2 ? Pow2FFT() : DFT(),N, s_in, s_out))
         return 1
     end
 
@@ -80,12 +85,12 @@ function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{
         N1 = N_cp[N1_idx]
     end
     N2 = N ÷ N1
-    push!(nodes, CallGraphNode(0,0,DFT(),N))
+    push!(nodes, CallGraphNode(0,0,DFT(),N,s_in,s_out))
     sz = length(nodes)
     push!(workspace, Vector{T}(undef, N))
-    left_len = CallGraphNode!(nodes, N1, workspace)
-    right_len = CallGraphNode!(nodes, N2, workspace)
-    nodes[sz] = CallGraphNode(1, 1 + left_len, CompositeFFT(), N)
+    left_len = CallGraphNode!(nodes, N1, workspace, N2, N2*s_out)
+    right_len = CallGraphNode!(nodes, N2, workspace, N1*s_in, 1)
+    nodes[sz] = CallGraphNode(1, 1 + left_len, CompositeFFT(), N, s_in, s_out)
     return 1 + left_len + right_len
 end
 
@@ -93,6 +98,6 @@ end
 function CallGraph{T}(N::Int) where {T}
     nodes = CallGraphNode[]
     workspace = Vector{Vector{T}}()
-    CallGraphNode!(nodes, N, workspace)
+    CallGraphNode!(nodes, N, workspace, 1, 1)
     CallGraph(nodes, workspace)
 end
