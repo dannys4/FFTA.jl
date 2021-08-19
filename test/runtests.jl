@@ -1,4 +1,4 @@
-using Test
+using Test, Random
 
 function padnum(m,x)
     digs = floor(Int, log10(m))
@@ -7,6 +7,8 @@ function padnum(m,x)
     for d in digits(x)[end:-1:1] push!(v, '0' + d) end
     String(v)
 end
+
+Random.seed(1)
 
 @testset verbose = true "1D" begin
     @testset verbose = true "Complex" begin
