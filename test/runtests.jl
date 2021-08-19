@@ -8,7 +8,7 @@ function padnum(m,x)
     String(v)
 end
 
-Random.seed(1)
+Random.seed!(1)
 
 @testset verbose = true "1D" begin
     @testset verbose = true "Complex" begin
