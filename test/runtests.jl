@@ -14,7 +14,7 @@ end
         include("complex_backward.jl")
     end
     @testset verbose = true "Real" begin
-        # include("real_forward.jl")
+        include("real_forward.jl")
         include("real_backward.jl")
     end
 end

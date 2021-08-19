@@ -62,8 +62,7 @@ end
 Power of 2 FFT in place, complex
 
 """
-function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, N::Int, start_out::Int, stride_out::Int, start_in::Int, stride_in::Int, d::Direction) where {T}
-
+function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{U}, N::Int, start_out::Int, stride_out::Int, start_in::Int, stride_in::Int, d::Direction) where {T, U}
     if N == 2
         out[start_out]              = in[start_in] + in[start_in + stride_in]
         out[start_out + stride_out] = in[start_in] - in[start_in + stride_in]
@@ -83,35 +82,6 @@ function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, N::Int, start_
         out[j1_out] = out_j + wj*out[j2_out]
         out[j2_out] = out_j - wj*out[j2_out]
         wj *= w1
-    end
-end
-
-"""
-Power of 2 FFT in place, real
-
-"""
-function fft_pow2!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, N::Int, start_out::Int, stride_out::Int, start_in::Int, stride_in::Int, d::Direction) where {T<:Real}
-    if N == 2
-        out[1] = in[1] + in[2]
-        out[2] = in[1] - in[2]
-        return
-    end
-    m = N ÷ 2
-    fft_pow2!(out, in, m, start_out    , stride_out, start_in    , stride_in*2, d)
-    fft_pow2!(out, in, m, start_out + m, stride_out, start_in + 1, stride_in*2, d)
-
-    w1 = convert(Complex{T}, cispi(direction_sign(d)*2/N))
-    wj = one(Complex{T})
-    @inbounds @turbo for j in 1:m-1
-        j1_out = start_out + j*stride_out
-        j2_out = start_out + (j+m)*stride_out
-        out[j1_out] = out[j1_out] + wj*out[j2_out]
-        wj *= w1
-    end
-    @inbounds @turbo for j in 1:m-1
-        j1_out = start_out + (j+m)*stride_out
-        j2_out = start_out + (m-j+1)*stride_out
-        out[j1_out] = conj(out[j2_out])
     end
 end
 
@@ -139,13 +109,17 @@ function fft_dft!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, N::Int
     halfN = N÷2
     wk = wkn = w = convert(Complex{T}, cispi(direction_sign(d)*2/N))
 
-    out[start_out + 1:stride_out:start_out+stride_out*N] .= in[1]
-    out[1] = sum(@view in[start_in:stride_in:start_int+stride_out*N])
-    iseven(N) && (out[start_out + stride_out*halfN] = alternatingSum(@view in[start_in:stride_in:start_int+stride_out*N]))
+    tmpBegin = tmpHalf = in[start_in]
+    @inbounds for j in 1:N-1
+        tmpBegin += in[start_in + stride_in*j]
+        iseven(j) ? tmpHalf += in[start_in + stride_in*j] : tmpHalf -= in[start_in + stride_in*j]
+    end
+    out[start_out] = convert(Complex{T}, tmpBegin)
+    iseven(N) && (out[start_out + stride_out*halfN] = convert(Complex{T}, tmpHalf))
     
-    @inbounds for d in 2:halfN+1
+    @inbounds for d in 1:halfN
         tmp = in[start_in]
-        @inbounds for k in 2:N
+        @inbounds for k in 1:N-1
             tmp += wkn*in[start_in + k*stride_in]
             wkn *= wk
         end
@@ -153,8 +127,8 @@ function fft_dft!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, N::Int
         wk *= w
         wkn = wk
     end
-    @inbounds @turbo for i in 0:halfN-1
-        out[start_out + stride_out*(N-i)] = conj(out[start_out + stride_out*(halfN-i)])
+    @inbounds @turbo for i in 1:halfN-1
+        out[start_out + stride_out*(N-i)] = conj(out[start_out + stride_out*i])
     end
 end
 

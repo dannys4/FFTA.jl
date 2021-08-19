@@ -1,8 +1,11 @@
 using FFTA, Test
 test_nums = [8, 11, 15, 100]
-@testset verbose = true "fft 1D real, size $(padnum(maximum(test_nums),N))" for N in test_nums
-    x = zeros(Float64, N)
-    x[1] = 1
-    y = fft(x)
-    @test y ≈ ones(size(x))
+@testset verbose = true "forward" begin 
+    for N in test_nums
+        x = ones(Float64, N)
+        y = fft(x)
+        y_ref = 0*y
+        y_ref[1] = N
+        @test y ≈ y_ref atol=1e-12
+    end
 end

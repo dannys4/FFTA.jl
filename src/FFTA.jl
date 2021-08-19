@@ -45,6 +45,13 @@ function bfft(x::AbstractVector{T}) where {T}
     y
 end
 
+function bfft(x::AbstractVector{T}) where {T <: Real}
+    y = similar(x, Complex{T})
+    g = CallGraph{Complex{T}}(length(x))
+    fft!(y, x, 1, 1, FFT_BACKWARD(), g[1].type, g, 1)
+    y
+end
+
 function bfft(x::AbstractMatrix{T}) where {T}
     M,N = size(x)
     y1 = similar(x)
