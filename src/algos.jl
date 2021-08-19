@@ -90,7 +90,7 @@ end
 Power of 2 FFT in place, real
 
 """
-function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{T}, N::Int, start_out::Int, stride_out::Int, start_in::Int, stride_in::Int, d::Direction) where {T<:Real}
+function fft_pow2!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, N::Int, start_out::Int, stride_out::Int, start_in::Int, stride_in::Int, d::Direction) where {T<:Real}
     if N == 2
         out[1] = in[1] + in[2]
         out[2] = in[1] - in[2]
