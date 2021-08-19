@@ -1,6 +1,6 @@
 using FFTA, Test
 test_nums = [8, 11, 15, 100]
-@testset verbose = true "forward" begin 
+@testset verbose = true " forward" begin 
     for N in test_nums
         x = ones(Float64, N)
         y = fft(x)
