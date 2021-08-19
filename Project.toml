@@ -11,6 +11,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [compat]
 DocStringExtensions = "0.8"
+LoopVectorization = "0.12"
 Primes = "0.5"
 julia = "1"
 
