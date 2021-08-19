@@ -10,6 +10,7 @@ Primes = "27ebfcd6-29c5-5fa9-bf4b-fb8fc14df3ae"
 
 [compat]
 DocStringExtensions = "0.8"
+LoopVectorization = "0.12"
 Primes = "0.5"
 julia = "1"
 
