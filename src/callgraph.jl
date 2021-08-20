@@ -1,6 +1,4 @@
-abstract type Direction end
-struct FFT_FORWARD <: Direction end
-struct FFT_BACKWARD <: Direction end
+@enum Direction FFT_FORWARD=-1 FFT_BACKWARD=1
 
 abstract type AbstractFFTType end
 
