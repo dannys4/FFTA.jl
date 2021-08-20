@@ -26,7 +26,7 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{U}, start_out::Int, sta
     @inbounds for j1 in 0:N1-1
         wk2 = wj1
         g(tmp, in, N2*j1+1, start_in + j1*s_in, d, right.type, right_idx)
-        j1 > 0 && @inbounds @turbo for k2 in 1:N2-1
+        j1 > 0 && @inbounds for k2 in 1:N2-1
             tmp[N2*j1 + k2 + 1] *= wk2
             wk2 *= wj1
         end
@@ -63,7 +63,7 @@ function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{U}, N::Int, start_
 
     w1 = convert(T, cispi(direction_sign(d)*2/N))
     wj = one(T)
-    @inbounds @turbo for j in 0:m-1
+    @inbounds for j in 0:m-1
         j1_out = start_out + j*stride_out
         j2_out = start_out + (j+m)*stride_out
         out_j    = out[j1_out]
@@ -81,7 +81,7 @@ function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, N::Int, start_o
     out[start_out] = tmp
     
     wk = wkn = w = convert(T, cispi(direction_sign(d)*2/N))
-    @inbounds @turbo for d in 1:N-1
+    @inbounds for d in 1:N-1
         tmp = in[start_in]
         @inbounds for k in 1:N-1
             tmp += wkn*in[start_in + k*stride_in]
@@ -105,7 +105,7 @@ function fft_dft!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, N::Int
     out[start_out] = convert(Complex{T}, tmpBegin)
     iseven(N) && (out[start_out + stride_out*halfN] = convert(Complex{T}, tmpHalf))
     
-    @inbounds @turbo for d in 1:halfN
+    @inbounds for d in 1:halfN
         tmp = in[start_in]
         @inbounds for k in 1:N-1
             tmp += wkn*in[start_in + k*stride_in]
