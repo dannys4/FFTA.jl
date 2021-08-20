@@ -8,12 +8,8 @@ end
 
 fft!(::AbstractVector{T}, ::AbstractVector{T}, ::Int, ::Int, ::Direction, ::AbstractFFTType, ::CallGraph{T}, ::Int) where {T} = nothing
 
-@inline function direction_sign(::FFT_BACKWARD)
-    1.
-end
-
-@inline function direction_sign(::FFT_FORWARD)
-    -1.
+@inline function direction_sign(d::Direction)
+    Int(d)
 end
 
 function (g::CallGraph{T})(out::AbstractVector{T}, in::AbstractVector{U}, start_out::Int, start_in::Int, v::Direction, t::AbstractFFTType, idx::Int) where {T,U}
