@@ -1,4 +1,5 @@
 @enum Direction FFT_FORWARD=-1 FFT_BACKWARD=1
+@enum Pow24 POW2=2 POW4=1
 
 abstract type AbstractFFTType end
 
@@ -7,6 +8,9 @@ struct CompositeFFT <: AbstractFFTType end
 
 # Represents a Radix-2 Cooley-Tukey FFT
 struct Pow2FFT <: AbstractFFTType end
+
+# Represents a Radix-4 Cooley-Tukey FFT
+struct Pow4FFT <: AbstractFFTType end
 
 # Represents an O(N²) DFT
 struct DFT <: AbstractFFTType end
@@ -62,16 +66,49 @@ leftNode(g::CallGraph, i::Int) = g[i+g[i].left]
 # Get the right child of the node at index `i`
 rightNode(g::CallGraph, i::Int) = g[i+g[i].right]
 
+function _ispow(N, base)
+    if base == 2
+        while N & 0b1 == 0
+            N >>= 1
+        end
+        return N == 1
+    elseif base == 4
+        while N & 0b11 == 0
+            N >>= 2
+        end
+        return N == 1
+    else
+        while N % base == 0
+            N = N/base
+        end
+        return N == 1
+    end
+end
+
+function _ispow24(N::Int)
+    N < 1 && return nothing
+    while N & 0b11 == 0
+        N >>= 2
+    end
+    return N < 3 ? Pow24(N) : nothing
+end
+
 # Recursively instantiate a set of `CallGraphNode`s
 function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{Vector{T}}, s_in::Int, s_out::Int)::Int where {T}
-    facs = factor(N)
-    Ns = [first(x) for x in collect(facs) for _ in 1:last(x)]
-    if length(Ns) == 1 || Ns[end] == 2
+    if N % 2 == 0
+        pow = _ispow24(N)
+        if !isnothing(pow)
+            push!(workspace, T[])
+            push!(nodes, CallGraphNode(0, 0, pow == POW2 ? Pow2FFT() : Pow4FFT(), N, s_in, s_out))
+            return 1
+        end
+    end
+    if isprime(N)
         push!(workspace, T[])
-        push!(nodes, CallGraphNode(0,0,Ns[end] == 2 ? Pow2FFT() : DFT(),N, s_in, s_out))
+        push!(nodes, CallGraphNode(0,0, DFT(),N, s_in, s_out))
         return 1
     end
-
+    Ns = [first(x) for x in collect(factor(N)) for _ in 1:last(x)]
     if Ns[1] == 2
         N1 = prod(Ns[Ns .== 2])
     else
