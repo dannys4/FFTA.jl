@@ -98,7 +98,9 @@ function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{
     if N % 2 == 0
         pow = _ispow24(N)
         if !isnothing(pow)
-            nodes[N] = CallGraphNode(0, 0, pow == POW2 ? Pow2FFT() : Pow4FFT(), N, s_in, s_out)
+            push!(workspace, T[])
+            push!(nodes, CallGraphNode(0, 0, pow == POW2 ? Pow2FFT() : Pow4FFT(), N, s_in, s_out))
+            return 1
         end
     end
     if isprime(N)
@@ -106,7 +108,6 @@ function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{
         push!(nodes, CallGraphNode(0,0, DFT(),N, s_in, s_out))
         return 1
     end
-    
     Ns = [first(x) for x in collect(factor(N)) for _ in 1:last(x)]
     if Ns[1] == 2
         N1 = prod(Ns[Ns .== 2])

@@ -1,5 +1,5 @@
 using FFTA, Test
-test_nums = [8, 11, 15, 100]
+test_nums = [8, 11, 15, 16, 100]
 @testset verbose = true " forward" begin
     for N in test_nums
         x = ones(ComplexF64, N)
