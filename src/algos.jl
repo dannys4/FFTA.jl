@@ -131,15 +131,17 @@ Power of 4 FFT in place
 """
 function fft_pow4!(out::AbstractVector{T}, in::AbstractVector{U}, N::Int, start_out::Int, stride_out::Int, start_in::Int, stride_in::Int, d::Direction) where {T, U}
     ds = direction_sign(d)
+    plusi = convert(T, float(ds*1im))
+    minusi = convert(T, float(ds*-1im))
     if N == 4
         y[start_out +       0] = x[start_in] + x[start_in + s_in] +
                                  x[start_in + 2*s_in] + x[start_in + 3*s_in]
-        y[start_out +   s_out] = x[start_in] + x[start_in + s_in]*convert(T,float(ds*1im)) -
-                                 x[start_in + 2*s_in] + x[start_in + 3*s_in]*convert(T,float(-ds*1im))
+        y[start_out +   s_out] = x[start_in] + x[start_in + s_in]*plusi -
+                                 x[start_in + 2*s_in] + x[start_in + 3*s_in]*minusi
         y[start_out + 2*s_out] = x[start_in] - x[start_in + s_in] +
                                  x[start_in + 2*s_in] - x[start_in + 3*s_in]
-        y[start_out + 3*s_out] = x[start_in] + x[start_in + s_in]*convert(T,float(-ds*1im)) -
-                                 x[start_in + 2*s_in] + x[start_in + 3*s_in]*convert(T,float(ds*1im))
+        y[start_out + 3*s_out] = x[start_in] + x[start_in + s_in]*minusi -
+                                 x[start_in + 2*s_in] + x[start_in + 3*s_in]*plusi
         return
     end
     m = N ÷ 4
@@ -152,7 +154,6 @@ function fft_pow4!(out::AbstractVector{T}, in::AbstractVector{U}, N::Int, start_
     w1 = convert(T, cispi(direction_sign(d)*2/N))
     wj = one(T)
     
-    inc = 2.*π/N;
     w1 = convert(T, cispi(ds*2/N))
     w2 = convert(T, cispi(ds*4/N))
     w3 = convert(T, cispi(ds*6/N))
@@ -165,9 +166,9 @@ function fft_pow4!(out::AbstractVector{T}, in::AbstractVector{U}, N::Int, start_
         k3 = start_out + (k+3*m)*stride_out
         y_k0, y_k1, y_k2, y_k3 = out[[k0, k1, k2, k3]]
         out[k0] = (y_k0 + y_k2*wk2) + (y_k1*wk1 + y_k3*wk2)
-        out[k1] = (y_k0 - y_k2*wk2) + (y_k1*wk1 - y_k3*wk3) * convert(T, float(ds*1im))
+        out[k1] = (y_k0 - y_k2*wk2) + (y_k1*wk1 - y_k3*wk3) * plusi
         out[k2] = (y_k0 + y_k2*wk2) - (y_k1*wk1 + y_k3*wk3)
-        out[k3] = (y_k0 - y_k2*wk2) + (y_k1*wk1 - y_k3*wk3) * convert(T, float(-ds*1im))
+        out[k3] = (y_k0 - y_k2*wk2) + (y_k1*wk1 - y_k3*wk3) * minusi
         wk1 *= w1
         wk2 *= w2
         wk3 *= w3
