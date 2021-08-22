@@ -188,14 +188,14 @@ function fft_pow3!(out::AbstractVector{T}, in::AbstractVector{U}, N::Int, start_
     end
 
     # Size of subproblem
-    Nprime = N/3
+    Nprime = N ÷ 3
 
     ds = direction_sign(d)
 
     # Dividing into subproblems
     fft_pow3!(out, in, Nprime, start_out, stride_out, start_in, stride_in*3, d, plus120, minus120)
-    fft_pow3!(out, in, Nprime, start_out + N_prime*stride_out, stride_out, start_in + stride_in, stride_in*3, d, plus120, minus120)
-    fft_pow3!(out, in, Nprime, start_out + 2*N_prime*stride_out, stride_out, start_in + 2*stride_in, stride_in*3, d, plus120, minus120)
+    fft_pow3!(out, in, Nprime, start_out + Nprime*stride_out, stride_out, start_in + stride_in, stride_in*3, d, plus120, minus120)
+    fft_pow3!(out, in, Nprime, start_out + 2*Nprime*stride_out, stride_out, start_in + 2*stride_in, stride_in*3, d, plus120, minus120)
 
     w1 = convert(T, cispi(ds*2/N))
     w2 = convert(T, cispi(ds*4/N))
