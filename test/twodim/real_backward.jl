@@ -1,5 +1,5 @@
 using FFTA, Test
-test_nums = [8, 11, 15, 16, 100]
+test_nums = [8, 11, 15, 16, 27, 100]
 @testset "backward" begin
     for N in test_nums
         x = ones(Float64, N, N)
