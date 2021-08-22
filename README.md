@@ -35,3 +35,17 @@ x = collect(x_a)
 y = simplify.(fft(x))
 ```
 Now, if you have a signal afterward that you want to substitute in, you can call `map(y_el -> substitute(y_el, Dict(x .=> signal)), y)`. Make no mistake-- it's almost certainly more efficient to just plug your type into `FFTA.fft` than using substitution. But this is an example of how `FFTA` integrates wonderfully and gracefully with the Julia ecosystem. If you want high precision FFTs, use `Complex{BigFloat}`. If you want to use an `SVector` from `StaticArrays` because your data is small, then use that! If you want to use `SizedArray{Complex{BigFloat}}`, be my guest. These are opportunities that won't be provided to you in almost any other package out there.
+
+As of this commit, you can do
+```julia
+julia> import FFTA, FFTW
+
+julia> N = 64
+
+julia> @btime FFTA.fft(x) setup=(x = @SVector rand(N));
+  698.611 ns (8 allocations: 2.11 KiB)
+
+julia> @btime FFTW.fft(x) setup=(x = @SVector rand(N));
+  5.433 μs (34 allocations: 4.70 KiB)
+```
+It's painfully obvious that this example is cherry-picked. Nonetheless, the user can finally take the speedups so much of the Julia community has worked so hard on and propogate them into the FFT.
