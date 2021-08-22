@@ -9,6 +9,9 @@ struct CompositeFFT <: AbstractFFTType end
 # Represents a Radix-2 Cooley-Tukey FFT
 struct Pow2FFT <: AbstractFFTType end
 
+# Represents a Radix-3 Cooley-Tukey FFT
+struct Pow3FFT <: AbstractFFTType end
+
 # Represents a Radix-4 Cooley-Tukey FFT
 struct Pow4FFT <: AbstractFFTType end
 
@@ -95,7 +98,7 @@ end
 
 # Recursively instantiate a set of `CallGraphNode`s
 function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{Vector{T}}, s_in::Int, s_out::Int)::Int where {T}
-    if N % 2 == 0
+    if iseven(N)
         pow = _ispow24(N)
         if !isnothing(pow)
             push!(workspace, T[])
