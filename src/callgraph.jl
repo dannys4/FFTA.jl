@@ -106,6 +106,13 @@ function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{
             return 1
         end
     end
+    if N % 3 == 0
+        if _ispow(N, 3)
+            push!(workspace, T[])
+            push!(nodes, CallGraphNode(0, 0, Pow3FFT(), N, s_in, s_out))
+            return 1
+        end
+    end
     if isprime(N)
         push!(workspace, T[])
         push!(nodes, CallGraphNode(0,0, DFT(),N, s_in, s_out))
@@ -114,6 +121,8 @@ function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{
     Ns = [first(x) for x in collect(factor(N)) for _ in 1:last(x)]
     if Ns[1] == 2
         N1 = prod(Ns[Ns .== 2])
+    elseif Ns[1] == 3
+        N1 = prod(Ns[Ns .== 3])
     else
         # Greedy search for closest factor of N to sqrt(N)
         Nsqrt = sqrt(N)
