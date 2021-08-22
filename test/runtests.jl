@@ -28,7 +28,7 @@ Random.seed!(1)
             @test x ≈ x2 atol=1e-12
         end
     end
-    @testset verbose = true "2D" begin
+    @testset verbose = false "2D" begin
         @testset verbose = true "Complex" begin
             include("twodim/complex_forward.jl")
             include("twodim/complex_backward.jl")

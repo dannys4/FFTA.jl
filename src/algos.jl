@@ -178,3 +178,51 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{U}, start_out::Int, sta
     s_out = root.s_out
     fft_pow4!(out, in, N, start_out, s_out, start_in, s_in, d)
 end
+
+function fft_pow3!(out::AbstractVector{T}, in::AbstractVector{U}, N::Int, start_out::Int, stride_out::Int, start_in::Int, stride_in::Int, d::Direction, plus120::T, minus120::T) where {T, U}
+    if N == 3
+        @muladd out[start_out + 0]            = in[start_in] + in[start_in + stride_in]          + in[start_in + 2*stride_in]
+        @muladd out[start_out +   stride_out] = in[start_in] + in[start_in + stride_in]*plus120  + in[start_in + 2*stride_in]*minus120
+        @muladd out[start_out + 2*stride_out] = in[start_in] + in[start_in + stride_in]*minus120 + in[start_in + 2*stride_in]*plus120
+        return
+    end
+
+    # Size of subproblem
+    Nprime = N ÷ 3
+
+    ds = direction_sign(d)
+
+    # Dividing into subproblems
+    fft_pow3!(out, in, Nprime, start_out, stride_out, start_in, stride_in*3, d, plus120, minus120)
+    fft_pow3!(out, in, Nprime, start_out + Nprime*stride_out, stride_out, start_in + stride_in, stride_in*3, d, plus120, minus120)
+    fft_pow3!(out, in, Nprime, start_out + 2*Nprime*stride_out, stride_out, start_in + 2*stride_in, stride_in*3, d, plus120, minus120)
+
+    w1 = convert(T, cispi(ds*2/N))
+    w2 = convert(T, cispi(ds*4/N))
+    wk1 = wk2 = one(T)
+    for k in 0:Nprime-1
+        @muladd k0 = start_out + k*stride_out
+        @muladd k1 = start_out + (k+Nprime)*stride_out
+        @muladd k2 = start_out + (k+2*Nprime)*stride_out
+        y_k0, y_k1, y_k2 = out[k0], out[k1], out[k2]
+        @muladd out[k0] = y_k0 + y_k1*wk1 + y_k2*wk2
+        @muladd out[k1] = y_k0 + y_k1*wk1*plus120 + y_k2*wk2*minus120
+        @muladd out[k2] = y_k0 + y_k1*wk1*minus120 + y_k2*wk2*plus120
+        wk1 *= w1
+        wk2 *= w2
+    end
+end
+
+function fft!(out::AbstractVector{T}, in::AbstractVector{U}, start_out::Int, start_in::Int, d::Direction, ::Pow3FFT, g::CallGraph{T}, idx::Int) where {T,U}
+    root = g[idx]
+    N = root.sz
+    s_in = root.s_in
+    s_out = root.s_out
+    p_120 = convert(T, cispi(2/3))
+    m_120 = convert(T, cispi(4/3))
+    if d == FFT_FORWARD
+        fft_pow3!(out, in, N, start_out, s_out, start_in, s_in, d, m_120, p_120)
+    else
+        fft_pow3!(out, in, N, start_out, s_out, start_in, s_in, d, p_120, m_120)
+    end
+end
