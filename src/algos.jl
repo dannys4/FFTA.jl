@@ -80,7 +80,7 @@ function fft_dft!(out::AbstractVector{Complex{T}}, in::AbstractVector{T}, N::Int
         wk *= w
         wkn = wk
     end
-    @inbounds @turbo for k in halfN+1:N-1
+    @inbounds for k in halfN+1:N-1
         out[start_out + stride_out*k] = conj(out[start_out + stride_out*(N-k)])
     end
 end
