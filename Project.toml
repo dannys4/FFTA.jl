@@ -4,6 +4,7 @@ authors = ["Danny Sharp <dannys4@mit.edu> and contributors"]
 version = "0.2.1"
 
 [deps]
+AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
 MuladdMacro = "46d2c3a1-f734-5fdb-9937-b9b9aeba4221"

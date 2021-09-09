@@ -1,12 +1,12 @@
 module FFTA
 
-using Primes, DocStringExtensions, LoopVectorization, MuladdMacro
+using Primes, DocStringExtensions, LoopVectorization, MuladdMacro, AbstractFFTs, ComputedFieldTypes
 export fft, bfft
 
 include("callgraph.jl")
 include("algos.jl")
 
-function fft(x::AbstractVector{T}) where {T}
+#= function fft(x::AbstractVector{T}) where {T}
     y = similar(x)
     g = CallGraph{T}(length(x))
     fft!(y, x, 1, 1, FFT_FORWARD, g[1].type, g, 1)
@@ -100,6 +100,8 @@ function bfft(x::AbstractMatrix{T}) where {T <: Real}
         @views fft!(y2[k,:], y1[k,:], 1, 1, FFT_BACKWARD, g2[1].type, g2, 1)
     end
     y2
-end
+end =#
+
+
 
 end
