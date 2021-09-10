@@ -2,6 +2,7 @@
 ## A library by Danny Sharp
 
 [![Github Action CI](https://github.com/dannys4/FFTA.jl/workflows/CI/badge.svg)](https://github.com/dannys4/FFTA.jl/actions)
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://dannys4.github.io/FFTA.jl/stable/)
 
 This is a *pure Julia* implementation of FFTs, with the goal that this could supplant other FFTs for applications that require odd Julia objects. Currently this supports `AbstractArray{T,N}` where `N` in `{1,2}` (i.e. `AbstractVector` and `AbstractMatrix`). If you're looking for more performance, checkout `FFTW.jl`. Regardless of `T`, `one(::Type{T})` must be defined. Additionally, if `T<:Complex`, then `convert(::Type{T},ComplexF64)` has to be defined and if `T<:Real`, then `convert(::Type{T}, Float64)` has to be defined.
 
