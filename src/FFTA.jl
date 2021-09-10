@@ -6,6 +6,21 @@ export fft, bfft
 include("callgraph.jl")
 include("algos.jl")
 
+"""
+$(TYPEDSIGNATURES)
+Perform a fast Fourier transform of a vector. Preserves types given by the
+user.
+
+# Arguments
+x::AbstractVector: The vector to transform.
+
+# Examples
+```julia
+julia> x = rand(ComplexF64, 10)
+
+julia> y = fft(x)
+```
+"""
 function fft(x::AbstractVector{T}) where {T}
     y = similar(x)
     g = CallGraph{T}(length(x))
@@ -20,6 +35,21 @@ function fft(x::AbstractVector{T}) where {T <: Real}
     y
 end
 
+"""
+$(TYPEDSIGNATURES)
+Perform a fast Fourier transform of a matrix. Preserves types given by the
+user.
+
+# Arguments
+x::AbstractMatrix: The matrix to transform (columnwise then rowwise).
+
+# Examples
+```julia
+julia> x = rand(ComplexF64, 10, 10)
+
+julia> y = fft(x)
+```
+"""
 function fft(x::AbstractMatrix{T}) where {T}
     M,N = size(x)
     y1 = similar(x)
@@ -54,6 +84,27 @@ function fft(x::AbstractMatrix{T}) where {T <: Real}
     y2
 end
 
+"""
+$(TYPEDSIGNATURES)
+Perform a backward fast Fourier transform of a vector, where "backward"
+indicates the same output signal down to a constant factor. Preserves types
+given by the user.
+
+# Arguments
+x::AbstractVector: The vector to transform
+
+# Examples
+```julia
+julia> x = rand(ComplexF64, 10)
+
+julia> y = bfft(x)
+
+julia> z = fft(y)
+
+julia> x ≈ z/10
+true
+```
+"""
 function bfft(x::AbstractVector{T}) where {T}
     y = similar(x)
     g = CallGraph{T}(length(x))
@@ -68,6 +119,27 @@ function bfft(x::AbstractVector{T}) where {T <: Real}
     y
 end
 
+"""
+$(TYPEDSIGNATURES)
+Perform a backward fast Fourier transform of a matrix, where "backward"
+indicates the same output signal down to a constant factor. Preserves types
+given by the user.
+
+# Arguments
+x::AbstractMatrix: The matrix to transform
+
+# Examples
+```julia
+julia> x = rand(ComplexF64, 10, 10)
+
+julia> y = bfft(x)
+
+julia> z = fft(y)
+
+julia> x ≈ z/100
+true
+```
+"""
 function bfft(x::AbstractMatrix{T}) where {T}
     M,N = size(x)
     y1 = similar(x)
