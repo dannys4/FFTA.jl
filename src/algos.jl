@@ -8,6 +8,20 @@ function (g::CallGraph{T})(out::AbstractVector{T}, in::AbstractVector{U}, start_
     fft!(out, in, start_out, start_in, v, t, g, idx)
 end
 
+"""
+$(TYPEDSIGNATURES)
+Cooley-Tukey composite FFT, with a pre-computed call graph
+
+# Arguments
+`out`: Output vector
+`in`: Input vector
+`start_out`: Index of the first element of the output vector
+`start_in`: Index of the first element of the input vector
+`d`: Direction of the transform
+`g`: Call graph for this transform
+`idx`: Index of the current transform in the call graph
+
+"""
 function fft!(out::AbstractVector{T}, in::AbstractVector{U}, start_out::Int, start_in::Int, d::Direction, ::CompositeFFT, g::CallGraph{T}, idx::Int) where {T,U}
     root = g[idx]
     left_idx = idx + root.left
@@ -38,6 +52,21 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{U}, start_out::Int, sta
     end
 end
 
+"""
+$(TYPEDSIGNATURES)
+Discrete Fourier Transform, O(N^2) algorithm, in place.
+
+# Arguments
+`out`: Output vector
+`in`: Input vector
+`N`: Size of the transform
+`start_out`: Index of the first element of the output vector
+`stride_out`: Stride of the output vector
+`start_in`: Index of the first element of the input vector
+`stride_in`: Stride of the input vector
+`d`: Direction of the transform
+
+"""
 function fft_dft!(out::AbstractVector{T}, in::AbstractVector{T}, N::Int, start_out::Int, stride_out::Int, start_in::Int, stride_in::Int, d::Direction) where {T}
     tmp = in[start_in]
     @inbounds for j in 1:N-1
@@ -91,7 +120,18 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{U}, start_out::Int, sta
 end
 
 """
-Power of 2 FFT in place
+$(TYPEDSIGNATURES)
+Power of 2 FFT, in place
+
+# Arguments
+`out`: Output vector
+`in`: Input vector
+`N`: Size of the transform
+`start_out`: Index of the first element of the output vector
+`stride_out`: Stride of the output vector
+`start_in`: Index of the first element of the input vector
+`stride_in`: Stride of the input vector
+`d`: Direction of the transform
 
 """
 function fft_pow2!(out::AbstractVector{T}, in::AbstractVector{U}, N::Int, start_out::Int, stride_out::Int, start_in::Int, stride_in::Int, d::Direction) where {T, U}
@@ -126,7 +166,18 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{U}, start_out::Int, sta
 end
 
 """
-Power of 4 FFT in place
+$(TYPEDSIGNATURES)
+Power of 4 FFT, in place
+
+# Arguments
+`out`: Output vector
+`in`: Input vector
+`N`: Size of the transform
+`start_out`: Index of the first element of the output vector
+`stride_out`: Stride of the output vector
+`start_in`: Index of the first element of the input vector
+`stride_in`: Stride of the input vector
+`d`: Direction of the transform
 
 """
 function fft_pow4!(out::AbstractVector{T}, in::AbstractVector{U}, N::Int, start_out::Int, stride_out::Int, start_in::Int, stride_in::Int, d::Direction) where {T, U}
@@ -179,6 +230,23 @@ function fft!(out::AbstractVector{T}, in::AbstractVector{U}, start_out::Int, sta
     fft_pow4!(out, in, N, start_out, s_out, start_in, s_in, d)
 end
 
+"""
+$(TYPEDSIGNATURES)
+Power of 3 FFT, in place
+
+# Arguments
+out: Output vector
+in: Input vector
+N: Size of the transform
+start_out: Index of the first element of the output vector
+stride_out: Stride of the output vector
+start_in: Index of the first element of the input vector
+stride_in: Stride of the input vector
+d: Direction of the transform
+plus120: Depending on direction, perform either ±120° rotation
+minus120: Depending on direction, perform either ∓120° rotation
+
+"""
 function fft_pow3!(out::AbstractVector{T}, in::AbstractVector{U}, N::Int, start_out::Int, stride_out::Int, start_in::Int, stride_in::Int, d::Direction, plus120::T, minus120::T) where {T, U}
     if N == 3
         @muladd out[start_out + 0]            = in[start_in] + in[start_in + stride_in]          + in[start_in + 2*stride_in]

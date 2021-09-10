@@ -4,6 +4,7 @@ using FFTA
 makedocs(
     sitename = "FFTA",
     format = Documenter.HTML(),
+    pages = ["Development Tools" => "dev.md"],
     modules = [FFTA]
 )
 
