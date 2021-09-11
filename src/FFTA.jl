@@ -1,6 +1,6 @@
 module FFTA
 
-using Primes, DocStringExtensions, LoopVectorization, MuladdMacro
+using Primes, DocStringExtensions, MuladdMacro
 export fft, bfft
 
 include("callgraph.jl")
