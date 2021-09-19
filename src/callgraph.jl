@@ -55,31 +55,11 @@ end
 # Get the node in the graph at index i
 Base.getindex(g::CallGraph{T}, i::Int) where {T} = g.nodes[i]
 
-# Get the left child of the node at index `i`
-leftNode(g::CallGraph, i::Int) = g[i+g[i].left]
+"""
+$(TYPEDSIGNATURES)
+Check if `N` is a power of 2 or 4
 
-# Get the right child of the node at index `i`
-rightNode(g::CallGraph, i::Int) = g[i+g[i].right]
-
-function _ispow(N, base)
-    if base == 2
-        while N & 0b1 == 0
-            N >>= 1
-        end
-        return N == 1
-    elseif base == 4
-        while N & 0b11 == 0
-            N >>= 2
-        end
-        return N == 1
-    else
-        while N % base == 0
-            N = N/base
-        end
-        return N == 1
-    end
-end
-
+"""
 function _ispow24(N::Int)
     N < 1 && return nothing
     while N & 0b11 == 0
