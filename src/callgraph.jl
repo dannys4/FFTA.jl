@@ -23,15 +23,11 @@ $(TYPEDSIGNATURES)
 Node of a call graph
 
 # Arguments
-`left::Int`- Offset to the left child node
-`right::Int`- Offset to the right child node
-`type::AbstractFFTType`- Object representing the type of FFT
-`sz::Int`- Size of this FFT
+`left`: Offset to the left child node
+`right`: Offset to the right child node
+`type`: Object representing the type of FFT
+`sz`: Size of this FFT
 
-# Examples
-```julia
-julia> CallGraphNode(0, 0, Pow2FFT(), 8)
-```
 """
 struct CallGraphNode
     left::Int
@@ -47,13 +43,9 @@ $(TYPEDSIGNATURES)
 Object representing a graph of FFT Calls
 
 # Arguments
-`nodes::Vector{CallGraphNode}`- Nodes keeping track of the graph
-`workspace::Vector{Vector{T}}`- Preallocated Workspace
+`nodes`: Nodes keeping track of the graph
+`workspace`: Preallocated Workspace
 
-# Examples
-```julia
-julia> CallGraph{ComplexF64}(CallGraphNode[], Vector{T}[])
-```
 """
 struct CallGraph{T<:Complex}
     nodes::Vector{CallGraphNode}
@@ -63,31 +55,23 @@ end
 # Get the node in the graph at index i
 Base.getindex(g::CallGraph{T}, i::Int) where {T} = g.nodes[i]
 
-# Get the left child of the node at index `i`
-leftNode(g::CallGraph, i::Int) = g[i+g[i].left]
+"""
+$(TYPEDSIGNATURES)
+Check if `N` is a power of `base`
 
-# Get the right child of the node at index `i`
-rightNode(g::CallGraph, i::Int) = g[i+g[i].right]
-
+"""
 function _ispow(N, base)
-    if base == 2
-        while N & 0b1 == 0
-            N >>= 1
-        end
-        return N == 1
-    elseif base == 4
-        while N & 0b11 == 0
-            N >>= 2
-        end
-        return N == 1
-    else
-        while N % base == 0
-            N = N/base
-        end
-        return N == 1
+    while N % base == 0
+        N = N/base
     end
+    return N == 1
 end
 
+"""
+$(TYPEDSIGNATURES)
+Check if `N` is a power of 2 or 4
+
+"""
 function _ispow24(N::Int)
     N < 1 && return nothing
     while N & 0b11 == 0
@@ -96,7 +80,18 @@ function _ispow24(N::Int)
     return N < 3 ? Pow24(N) : nothing
 end
 
-# Recursively instantiate a set of `CallGraphNode`s
+"""
+$(TYPEDSIGNATURES)
+Recursively instantiate a set of `CallGraphNode`s
+
+# Arguments
+`nodes`: A vector (which gets expanded) of `CallGraphNode`s
+`N`: The size of the FFT
+`workspace`: A vector (which gets expanded) of preallocated workspaces
+`s_in`: The stride of the input
+`s_out`: The stride of the output
+
+"""
 function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{Vector{T}}, s_in::Int, s_out::Int)::Int where {T}
     if iseven(N)
         pow = _ispow24(N)
@@ -141,7 +136,11 @@ function CallGraphNode!(nodes::Vector{CallGraphNode}, N::Int, workspace::Vector{
     return 1 + left_len + right_len
 end
 
-# Instantiate a CallGraph from a number `N`
+"""
+$(TYPEDSIGNATURES)
+Instantiate a CallGraph from a number `N`
+
+"""
 function CallGraph{T}(N::Int) where {T}
     nodes = CallGraphNode[]
     workspace = Vector{Vector{T}}()
