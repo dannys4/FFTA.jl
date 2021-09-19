@@ -57,6 +57,18 @@ Base.getindex(g::CallGraph{T}, i::Int) where {T} = g.nodes[i]
 
 """
 $(TYPEDSIGNATURES)
+Check if `N` is a power of `base`
+
+"""
+function _ispow(N, base)
+    while N % base == 0
+        N = N/base
+    end
+    return N == 1
+end
+
+"""
+$(TYPEDSIGNATURES)
 Check if `N` is a power of 2 or 4
 
 """
