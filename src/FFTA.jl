@@ -1,10 +1,13 @@
 module FFTA
 
-using Primes, DocStringExtensions, MuladdMacro, AbstractFFTs, ComputedFieldTypes
-export fft, bfft
+using Primes, DocStringExtensions, Reexport, MuladdMacro, ComputedFieldTypes, LinearAlgebra
+@reexport using AbstractFFTs
+
+import AbstractFFTs: Plan
 
 include("callgraph.jl")
 include("algos.jl")
+include("plan.jl")
 
 #=
 """
