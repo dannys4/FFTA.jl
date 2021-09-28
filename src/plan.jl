@@ -26,6 +26,22 @@ function AbstractFFTs.plan_fft(x::AbstractArray{T}, region; kwargs...)::FFTAPlan
     end
 end
 
+function AbstractFFTs.plan_bfft(x::AbstractArray{T}, region; kwargs...)::FFTAPlan{T} where {T <: Complex}
+    N = length(region)
+    @assert N <= 2 "Only supports vectors and matrices"
+    if N == 1
+        g = CallGraph{T}(size(x,region[]))
+        pinv = FFTAInvPlan{T}()
+        return FFTAPlan{T,N}((g,), region, FFT_BACKWARD, pinv)
+    else
+        sort!(region)
+        g1 = CallGraph{T}(size(x,region[1]))
+        g2 = CallGraph{T}(size(x,region[2]))
+        pinv = FFTAInvPlan{T}()
+        return FFTAPlan{T,N}((g1,g2), region, FFT_BACKWARD, pinv)
+    end
+end
+
 function AbstractFFTs.plan_bfft(p::FFTAPlan{T,N}) where {T,N}
     return FFTAPlan{T,N}(p.callgraph, p.region, -p.dir, p.pinv)
 end
