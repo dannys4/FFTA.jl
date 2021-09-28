@@ -60,6 +60,18 @@ function LinearAlgebra.mul!(y::AbstractArray{T,N}, p::FFTAPlan{T,1}, x::Abstract
     end
 end
 
+function LinearAlgebra.mul!(y::AbstractMatrix{T}, p::FFTAPlan{T,1}, x::AbstractMatrix{T}) where T
+    rows,cols = size(x)[p.region]
+    y_tmp = similar(y)
+    for k in 1:cols
+        @views fft!(y_tmp[:,k],  x[:,k], 1, 1, p.dir, p.callgraph[2][1].type, p.callgraph[2], 1)
+    end
+
+    for k in 1:rows
+        @views fft!(y[k,:], y_tmp[k,:], 1, 1, p.dir, p.callgraph[1][1].type, p.callgraph[1], 1)
+    end
+end
+
 function LinearAlgebra.mul!(y::AbstractArray{T,N}, p::FFTAPlan{T,2}, x::AbstractArray{T,N}) where {T,N}
     R1 = CartesianIndices(size(x)[1:p.region[1]-1])
     R2 = CartesianIndices(size(x)[p.region[1]+1:p.region[2]-1])
