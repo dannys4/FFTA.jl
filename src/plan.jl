@@ -3,14 +3,14 @@ import LinearAlgebra: mul!
 
 struct FFTAInvPlan{T} <: Plan{T} end
 
-@computed struct FFTAPlan{T<:Union{Real, Complex},N} <: Plan{T}
-    callgraph::NTuple{N, CallGraph{(T<:Real) ? Complex{T} : T}}
-    region
+struct FFTAPlan{T,N} <: Plan{T}
+    callgraph::NTuple{N, CallGraph{T}}
+    region::Union{Int,AbstractVector{<:Int}}
     dir::Direction
     pinv::FFTAInvPlan{T}
 end
 
-function AbstractFFTs.plan_fft(x::AbstractArray{T}, region; kwargs...)::FFTAPlan{T} where T
+function AbstractFFTs.plan_fft(x::AbstractArray{T}, region; kwargs...)::FFTAPlan{T} where {T <: Complex}
     N = length(region)
     @assert N <= 2 "Only supports vectors and matrices"
     if N == 1
@@ -18,6 +18,7 @@ function AbstractFFTs.plan_fft(x::AbstractArray{T}, region; kwargs...)::FFTAPlan
         pinv = FFTAInvPlan{T}()
         return FFTAPlan{T,N}((g,), region, FFT_FORWARD, pinv)
     else
+        sort!(region)
         g1 = CallGraph{T}(size(x,region[1]))
         g2 = CallGraph{T}(size(x,region[2]))
         pinv = FFTAInvPlan{T}()
@@ -43,7 +44,34 @@ function LinearAlgebra.mul!(y::AbstractArray{T,N}, p::FFTAPlan{T,1}, x::Abstract
     end
 end
 
+function LinearAlgebra.mul!(y::AbstractArray{T,N}, p::FFTAPlan{T,2}, x::AbstractArray{T,N}) where {T,N}
+    R1 = CartesianIndices(size(x)[1:p.region[1]-1])
+    R2 = CartesianIndices(size(x)[p.region[1]+1:p.region[2]-1])
+    R3 = CartesianIndices(size(x)[p.region[2]+1:end])
+    y_tmp = similar(y, axes(y)[p.region])
+    for I1 in R1
+        for I2 in R2
+            for I3 in R3
+                rows,cols = size(x)[p.region]
+                for k in 1:cols
+                    @views fft!(y_tmp[:,k],  x[I1,:,I2,k,I3], 1, 1, p.dir, p.callgraph[2][1].type, p.callgraph[2], 1)
+                end
+            
+                for k in 1:rows
+                    @views fft!(y[I1,k,I2,:,I3], y_tmp[k,:], 1, 1, p.dir, p.callgraph[1][1].type, p.callgraph[1], 1)
+                end
+            end
+        end
+    end
+end
+
 function *(p::FFTAPlan{T,1}, x::AbstractVector{T}) where {T<:Union{Real, Complex}}
+    y = similar(x)
+    LinearAlgebra.mul!(y, p, x)
+    y
+end
+
+function *(p::FFTAPlan{T,N1}, x::AbstractArray{T,N2}) where {T<:Union{Real, Complex}, N1, N2}
     y = similar(x)
     LinearAlgebra.mul!(y, p, x)
     y
