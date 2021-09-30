@@ -1,6 +1,6 @@
 module FFTA
 
-using Primes, DocStringExtensions, Reexport, MuladdMacro, ComputedFieldTypes, LinearAlgebra
+using Primes, DocStringExtensions, Reexport, MuladdMacro, LinearAlgebra
 @reexport using AbstractFFTs
 
 import AbstractFFTs: Plan
