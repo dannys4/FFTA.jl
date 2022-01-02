@@ -52,34 +52,33 @@ function AbstractFFTs.plan_bfft(x::AbstractArray{T}, region; kwargs...)::FFTAPla
     end
 end
 
-function AbstractFFTs.plan_rfft(x::AbstractArray{T}, region; kwargs...)::FFTAPlan_re{T} where {T <: Real}
+function AbstractFFTs.plan_rfft(x::AbstractArray{T}, region; kwargs...)::FFTAPlan_re{Complex{T}} where {T <: Real}
     N = length(region)
     @assert N <= 2 "Only supports vectors and matrices"
     if N == 1
         g = CallGraph{Complex{T}}(size(x,region[]))
-        pinv = FFTAInvPlan{T,N}()
-        return FFTAPlan_re{T,N}((g,), region, FFT_FORWARD, pinv, size(x,region[]))
+        pinv = FFTAInvPlan{Complex{T},N}()
+        return FFTAPlan_re{Complex{T},N}(tuple(g), region, FFT_FORWARD, pinv, size(x,region[]))
     else
         sort!(region)
         g1 = CallGraph{Complex{T}}(size(x,region[1]))
         g2 = CallGraph{Complex{T}}(size(x,region[2]))
-        pinv = FFTAInvPlan{T,N}()
-        return FFTAPlan_re{T,N}((g1,g2), region, FFT_FORWARD, pinv, size(x,region[1]))
+        pinv = FFTAInvPlan{Complex{T},N}()
+        return FFTAPlan_re{Complex{T},N}(tuple(g1,g2), region, FFT_FORWARD, pinv, size(x,region[1]))
     end
 end
 
 function AbstractFFTs.plan_brfft(x::AbstractArray{T}, len, region; kwargs...)::FFTAPlan_re{T} where {T}
     N = length(region)
-    @info "" x
     @assert N <= 2 "Only supports vectors and matrices"
     if N == 1
-        g = CallGraph{Complex{T}}(len)
+        g = CallGraph{T}(len)
         pinv = FFTAInvPlan{T,N}()
         return FFTAPlan_re{T,N}((g,), region, FFT_BACKWARD, pinv, len)
     else
         sort!(region)
-        g1 = CallGraph{Complex{T}}(len)
-        g2 = CallGraph{Complex{T}}(size(x,region[2]))
+        g1 = CallGraph{T}(len)
+        g2 = CallGraph{T}(size(x,region[2]))
         pinv = FFTAInvPlan{T,N}()
         return FFTAPlan_re{T,N}((g1,g2), region, FFT_BACKWARD, pinv, len)
     end
@@ -107,37 +106,15 @@ function LinearAlgebra.mul!(y::AbstractArray{U,N}, p::FFTAPlan{T,1}, x::Abstract
     end
 end
 
-function LinearAlgebra.mul!(y::AbstractArray{U,N}, p::FFTAPlan_cx{T,2}, x::AbstractArray{T,N}) where {T,U,N}
+function LinearAlgebra.mul!(y::AbstractArray{U,N}, p::FFTAPlan{T,2}, x::AbstractArray{T,N}) where {T,U,N}
     R1 = CartesianIndices(size(x)[1:p.region[1]-1])
     R2 = CartesianIndices(size(x)[p.region[1]+1:p.region[2]-1])
     R3 = CartesianIndices(size(x)[p.region[2]+1:end])
     y_tmp = similar(y, axes(y)[p.region])
+    rows,cols = size(x)[p.region]
     for I1 in R1
         for I2 in R2
             for I3 in R3
-                rows,cols = size(x)[p.region]
-                for k in 1:cols
-                    @views fft!(y_tmp[:,k],  x[I1,:,I2,k,I3], 1, 1, p.dir, p.callgraph[2][1].type, p.callgraph[2], 1)
-                end
-            
-                for k in 1:rows
-                    @views fft!(y[I1,k,I2,:,I3], y_tmp[k,:], 1, 1, p.dir, p.callgraph[1][1].type, p.callgraph[1], 1)
-                end
-            end
-        end
-    end
-end
-
-
-function LinearAlgebra.mul!(y::AbstractArray{U,N}, p::FFTAPlan_re{T,2}, x::AbstractArray{T,N}) where {T,U,N}
-    R1 = CartesianIndices(size(x)[1:p.region[1]-1])
-    R2 = CartesianIndices(size(x)[p.region[1]+1:p.region[2]-1])
-    R3 = CartesianIndices(size(x)[p.region[2]+1:end])
-    y_tmp = similar(y, axes(y)[p.region])
-    for I1 in R1
-        for I2 in R2
-            for I3 in R3
-                rows,cols = size(x)[p.region]
                 for k in 1:cols
                     @views fft!(y_tmp[:,k],  x[I1,:,I2,k,I3], 1, 1, p.dir, p.callgraph[2][1].type, p.callgraph[2], 1)
                 end
@@ -163,9 +140,18 @@ function *(p::FFTAPlan{T,N1}, x::AbstractArray{T,N2}) where {T<:Union{Real, Comp
 end
 
 function *(p::FFTAPlan_re{T,1}, x::AbstractVector{T}) where {T<:Union{Real, Complex}}
-    y = similar(x, T <: Real ? Complex{T} : T)
-    LinearAlgebra.mul!(y, p, x)
-    y[1:end÷2 + 1]
+    if p.dir == FFT_FORWARD
+        y = similar(x, T <: Real ? Complex{T} : T)
+        LinearAlgebra.mul!(y, p, x)
+        return y[1:end÷2 + 1]
+    else
+        x_tmp = similar(x, p.flen)
+        x_tmp[1:end÷2 + 1] .= x
+        x_tmp[end÷2 + 2:end] .= iseven(p.flen) ? conj.(x[end-1:-1:2]) : conj.(x[end:-1:2])
+        y = similar(x_tmp)
+        LinearAlgebra.mul!(y, p, x_tmp)
+        return y
+    end
 end
 
 function *(p::FFTAPlan_re{T,N}, x::AbstractArray{T,2}) where {T<:Union{Real, Complex}, N}
