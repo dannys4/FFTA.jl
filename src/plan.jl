@@ -80,6 +80,7 @@ function AbstractFFTs.plan_brfft(x::AbstractArray{T}, len, region; kwargs...)::F
         g1 = CallGraph{T}(len)
         g2 = CallGraph{T}(size(x,region[2]))
         pinv = FFTAInvPlan{T,N}()
+        # @info "" g2[1]
         return FFTAPlan_re{T,N}((g1,g2), region, FFT_BACKWARD, pinv, len)
     end
 end
@@ -115,12 +116,14 @@ function LinearAlgebra.mul!(y::AbstractArray{U,N}, p::FFTAPlan{T,2}, x::Abstract
     for I1 in R1
         for I2 in R2
             for I3 in R3
+                
                 for k in 1:cols
-                    @views fft!(y_tmp[:,k],  x[I1,:,I2,k,I3], 1, 1, p.dir, p.callgraph[2][1].type, p.callgraph[2], 1)
+                    @views fft!(y_tmp[:,k],  x[I1,:,I2,k,I3], 1, 1, p.dir, p.callgraph[1][1].type, p.callgraph[1], 1)
                 end
-            
+                # @info "" y_tmp[:, 1] x[I1,:,I2,1,I3] y_tmp[1,:] y[I1,1,I2,:,I3] cols rows
                 for k in 1:rows
-                    @views fft!(y[I1,k,I2,:,I3], y_tmp[k,:], 1, 1, p.dir, p.callgraph[1][1].type, p.callgraph[1], 1)
+                    # @info "" k
+                    @views fft!(y[I1,k,I2,:,I3], y_tmp[k,:], 1, 1, p.dir, p.callgraph[2][1].type, p.callgraph[2], 1)
                 end
             end
         end
@@ -155,7 +158,16 @@ function *(p::FFTAPlan_re{T,1}, x::AbstractVector{T}) where {T<:Union{Real, Comp
 end
 
 function *(p::FFTAPlan_re{T,N}, x::AbstractArray{T,2}) where {T<:Union{Real, Complex}, N}
-    y = similar(x, T <: Real ? Complex{T} : T)
-    LinearAlgebra.mul!(y, p, x)
-    y
+    if p.dir == FFT_FORWARD
+        y = similar(x, T <: Real ? Complex{T} : T)
+        LinearAlgebra.mul!(y, p, x)
+        return y[1:end÷2 + 1,:]
+    else
+        x_tmp = similar(x, p.flen, size(x)[2])
+        x_tmp[1:end÷2 + 1,:] .= x
+        x_tmp[end÷2 + 2:end,:] .= iseven(p.flen) ? conj.(x[end-1:-1:2,:]) : conj.(x[end:-1:2,:])
+        y = similar(x_tmp)
+        LinearAlgebra.mul!(y, p, x_tmp)
+        return y
+    end
 end

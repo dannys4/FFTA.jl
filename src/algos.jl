@@ -116,6 +116,7 @@ end
 
 function fft!(out::AbstractVector{T}, in::AbstractVector{U}, start_out::Int, start_in::Int, d::Direction, ::DFT, g::CallGraph{T}, idx::Int) where {T,U}
     root = g[idx]
+    # @info "" g idx g[idx]
     fft_dft!(out, in, root.sz, start_out, root.s_out, start_in, root.s_in, d)
 end
 
