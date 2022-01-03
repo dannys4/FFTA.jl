@@ -11,7 +11,7 @@ end
 Random.seed!(1)
 @testset verbose = true "FFTA" begin
     @testset verbose = true "1D" begin
-        @testset verbose = true "Complex" begin
+        @testset verbose = false "Complex" begin
             include("onedim/complex_forward.jl")
             include("onedim/complex_backward.jl")
             x = rand(ComplexF64, 100)
@@ -19,7 +19,7 @@ Random.seed!(1)
             x2 = bfft(y)/length(x)
             @test x ≈ x2 atol=1e-12
         end
-        @testset verbose = true "Real" begin
+        @testset verbose = false "Real" begin
             include("onedim/real_forward.jl")
             include("onedim/real_backward.jl")
             x = rand(Float64, 100)
