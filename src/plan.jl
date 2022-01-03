@@ -80,7 +80,6 @@ function AbstractFFTs.plan_brfft(x::AbstractArray{T}, len, region; kwargs...)::F
         g1 = CallGraph{T}(len)
         g2 = CallGraph{T}(size(x,region[2]))
         pinv = FFTAInvPlan{T,N}()
-        # @info "" g2[1]
         return FFTAPlan_re{T,N}((g1,g2), region, FFT_BACKWARD, pinv, len)
     end
 end
@@ -116,13 +115,11 @@ function LinearAlgebra.mul!(y::AbstractArray{U,N}, p::FFTAPlan{T,2}, x::Abstract
     for I1 in R1
         for I2 in R2
             for I3 in R3
-                
                 for k in 1:cols
                     @views fft!(y_tmp[:,k],  x[I1,:,I2,k,I3], 1, 1, p.dir, p.callgraph[1][1].type, p.callgraph[1], 1)
                 end
-                # @info "" y_tmp[:, 1] x[I1,:,I2,1,I3] y_tmp[1,:] y[I1,1,I2,:,I3] cols rows
+
                 for k in 1:rows
-                    # @info "" k
                     @views fft!(y[I1,k,I2,:,I3], y_tmp[k,:], 1, 1, p.dir, p.callgraph[2][1].type, p.callgraph[2], 1)
                 end
             end
