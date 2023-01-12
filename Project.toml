@@ -18,6 +18,7 @@ DocStringExtensions = "0.8, 0.9"
 Documenter = "0.27"
 MuladdMacro = "0.2"
 Primes = "0.5"
+Reexport = "1"
 julia = "1"
 
 [extras]
